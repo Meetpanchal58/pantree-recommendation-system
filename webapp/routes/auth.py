@@ -6,6 +6,7 @@ from fastapi import APIRouter
 
 from .. import auth, profile
 from ..core import (
+    _catalog_cached,
     Cookie,
     HTMLResponse,
     RedirectResponse,
@@ -41,12 +42,23 @@ def _redirect_with(path: str, msg: str) -> RedirectResponse:
     return RedirectResponse(f"{path}?msg={quote_plus(msg)}", status_code=303)
 
 
+@router.get("/terms", response_class=HTMLResponse)
+def terms_page(request: Request):
+    return tpl.TemplateResponse(request, "legal.html", {"title": "Terms of use", "page": "terms"})
+
+
+@router.get("/privacy", response_class=HTMLResponse)
+def privacy_page(request: Request):
+    return tpl.TemplateResponse(request, "legal.html", {"title": "Privacy policy", "page": "privacy"})
+
+
 @router.get("/login", response_class=HTMLResponse)
 def login_page(request: Request, error: str = "", msg: str = "", sid: str = Cookie(None)):
     con = db()
     try:
         if get_session(con, sid):
             return RedirectResponse("/", status_code=303)
+        showcase = _showcase_products(con)
     finally:
         con.close()
     return tpl.TemplateResponse(
@@ -56,10 +68,46 @@ def login_page(request: Request, error: str = "", msg: str = "", sid: str = Cook
             "title": "Sign in",
             "error": LOGIN_ERRORS.get(error, ""),
             "msg": msg,
+            "showcase": showcase,
             "google_enabled": auth.google_configured(),
             "dev_login": auth.dev_login_enabled(),
         },
     )
+
+
+# Sign-in collage: one well-reviewed, in-stock product per (department, gender), in this order,
+# so the page shows womenswear and menswear across apparel, footwear and accessories.
+SHOWCASE_SLOTS = [
+    ("Apparel", "Women"), ("Footwear", "Men"), ("Accessories", "Women"),
+    ("Apparel", "Men"), ("Footwear", "Women"), ("Accessories", "Men"),
+]
+
+
+def _showcase_products(con):
+    """Products with photos for the sign-in page (cached on Postgres)."""
+    def compute():
+        picked = []
+        for department, gender in SHOWCASE_SLOTS:
+            row = con.execute(
+                """SELECT p.product_name, p.image_url
+                   FROM products p JOIN inventory i USING(product_id)
+                   WHERE p.h1_category=? AND p.gender=? AND i.current_stock > 0
+                     AND p.image_url IS NOT NULL AND p.image_url <> ''
+                   ORDER BY p.review_count DESC, p.avg_rating DESC, p.product_id LIMIT 1""",
+                (department, gender),
+            ).fetchone()
+            if row:
+                url = row["image_url"]
+                if url.startswith("http://"):  # the page is served over HTTPS
+                    url = "https://" + url[len("http://"):]
+                picked.append({"product_name": row["product_name"], "image_url": url})
+        return picked
+
+    try:
+        return _catalog_cached(con, "login_showcase", compute)
+    except Exception:  # e.g. a fresh, unseeded database
+        logger.warning("Sign-in showcase unavailable", exc_info=True)
+        return []
 
 
 # ----------------------------------------------------------------------------- identity -> customer

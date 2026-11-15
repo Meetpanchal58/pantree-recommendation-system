@@ -4,65 +4,96 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#0f3d35">
+<meta name="description" content="Sign in to Pantree to shop womenswear and menswear: apparel, footwear and accessories picked for you.">
 <title>Sign in · Pantree</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=Roboto:wght@500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/css/pantree.css?v={{ asset_version }}">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f3d35'/%3E%3Ctext x='16' y='23' font-family='Georgia' font-size='20' font-weight='700' fill='%23f0be5a' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E">
 </head>
-<body>
+<body class="auth-body">
 <div class="auth-page">
-  <section class="auth-brand" aria-label="About Pantree">
+  <section class="auth-brand" aria-label="Pantree">
     <a href="/login" class="logo">Pan<span>tree</span></a>
-    <div>
-      <h1>Everyday pieces, <em>picked for you.</em></h1>
-      <p>A fashion store whose home page learns from what you browse and buy, with a recommender evaluated on real held-out orders.</p>
-      <ul class="auth-points">
-        <li>Apparel, footwear and accessories from a real catalogue</li>
-        <li>Recommendations that update as you shop</li>
-        <li>Demo checkout: no card is ever charged</li>
-      </ul>
+
+    <div class="auth-hero">
+      <h1>Style that <em>gets you.</em></h1>
+      <p>Womenswear and menswear from brands you know. Fresh picks for you, every visit.</p>
     </div>
-    <small>Pantree is a portfolio demo. Customers, prices and orders are simulated.</small>
+
+    {% if showcase %}
+    <div class="auth-showcase" aria-hidden="true">
+      {% for p in showcase %}
+      <figure class="showcase-item">
+        <img src="{{ p.image_url }}" alt="" width="400" height="500" decoding="async" loading="{{ 'eager' if loop.index <= 3 else 'lazy' }}" onerror="this.closest('figure').remove()">
+      </figure>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <ul class="auth-points">
+      <li>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg>
+        Free delivery
+      </li>
+      <li>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+        Easy returns
+      </li>
+      <li>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        Secure checkout
+      </li>
+    </ul>
   </section>
 
-  <section class="auth-panel">
+  <main class="auth-panel">
     <div class="auth-card">
-      <div class="eyebrow">Welcome</div>
-      <h2>Sign in or create an account</h2>
-      <p class="muted">One step with your Google account. If you're new, we'll set up your Pantree account automatically.</p>
+      <a href="/login" class="logo auth-mobile-logo">Pan<span>tree</span></a>
+      {% if showcase %}
+      <div class="auth-strip" aria-hidden="true">
+        {% for p in showcase[:4] %}<img src="{{ p.image_url }}" alt="" width="120" height="150" decoding="async" loading="lazy" onerror="this.remove()">{% endfor %}
+      </div>
+      {% endif %}
+      <h2>Welcome to Pantree</h2>
+      <p class="auth-lead">Sign in or create your account in one step.</p>
 
       {% if error %}<div class="alert alert-error" role="alert">{{ error }}</div>{% endif %}
-      {% if msg %}<div class="alert alert-ok" role="status">{{ msg }}</div>{% endif %}
+      {% if msg %}<div class="auth-notice" role="status" data-autohide>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5L20 7"/></svg>{{ msg }}</div>{% endif %}
 
       {% if google_enabled %}
       <a class="google-btn" href="/auth/google/login">
         <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>
-        Continue with Google
+        <span>Continue with Google</span>
       </a>
-      <div class="auth-steps">
-        <span><b>Already shopped with us?</b> You'll go straight to your account.</span>
-        <span><b>New to Pantree?</b> Your account is created from your Google name and email; add your city, phone and address in your profile afterwards.</span>
-      </div>
+      <p class="auth-note">New here? Your account is created automatically. You can add your address and phone later.</p>
       {% elif not dev_login %}
-      <div class="alert alert-info">Google sign-in is not configured on this server yet. Set <code>GOOGLE_CLIENT_ID</code> and <code>GOOGLE_CLIENT_SECRET</code>.</div>
+      <div class="alert alert-info">Sign-in is not available right now. Please try again later.</div>
       {% endif %}
 
       {% if dev_login %}
-      <div class="auth-divider">Local development only</div>
+      <div class="auth-divider"><span>Local development only</span></div>
       <form class="dev-form" method="post" action="/auth/dev-login">
         <label class="sr-only" for="dev-name">Name</label>
         <input id="dev-name" name="name" placeholder="Your name" autocomplete="name">
         <label class="sr-only" for="dev-email">Email</label>
         <input id="dev-email" name="email" type="email" placeholder="you@example.com" required autocomplete="email">
         <button class="btn btn-block" type="submit">Developer sign-in</button>
-        <small class="muted">Shown because <code>APP_ENV=development</code> and no Google client is configured. Never available in production.</small>
       </form>
       {% endif %}
 
-      <p class="auth-legal">By continuing you agree to Pantree's demo terms and privacy policy. We only receive your name, email address and profile photo from Google.</p>
+      <p class="auth-legal">By continuing, you agree to Pantree's <a href="/terms">Terms of use</a> and <a href="/privacy">Privacy policy</a>. Google shares only your name, email address and profile photo with us.</p>
     </div>
-  </section>
+    <footer class="auth-footer">© Pantree · <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · Demo store: payments are simulated</footer>
+  </main>
 </div>
+<script>
+// The signed-out notice fades away after a few seconds.
+document.querySelectorAll("[data-autohide]").forEach((el) => {
+  setTimeout(() => { el.classList.add("is-hidden"); setTimeout(() => el.remove(), 400); }, 4000);
+});
+</script>
 </body>
 </html>

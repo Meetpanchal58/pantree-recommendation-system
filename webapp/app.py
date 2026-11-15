@@ -140,7 +140,7 @@ async def protect_storefront_sessions(request: Request, call_next):
             )
 
     path = request.url.path
-    if path.startswith(("/auth", "/login", "/static/", "/healthz")):
+    if path.startswith(("/auth", "/login", "/static/", "/healthz", "/terms", "/privacy")):
         return await call_next(request)
 
     sid = request.cookies.get(signin.SESSION_COOKIE)

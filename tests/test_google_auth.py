@@ -98,6 +98,14 @@ class GoogleAuthTests(unittest.TestCase):
         self.assertNotIn("/auth/dev-login", page.text)
         self.assertNotIn("otp", page.text.lower())
 
+    def test_terms_and_privacy_are_public_and_linked_from_sign_in(self):
+        for path in ("/terms", "/privacy"):
+            page = self.client.get(path)
+            self.assertEqual(page.status_code, 200, path)
+        login = self.client.get("/login")
+        self.assertIn('href="/terms"', login.text)
+        self.assertIn('href="/privacy"', login.text)
+
     def test_new_google_account_creates_customer_and_goes_to_profile(self):
         response = self.sign_in()
         self.assertEqual(response.status_code, 303)
