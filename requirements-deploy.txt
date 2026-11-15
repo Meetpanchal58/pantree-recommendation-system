@@ -1,4 +1,4 @@
-# Slim dependency set for small hosts such as Render's free tier.
+# Slim dependency set for the Cloud Run image (see Dockerfile).
 # Leaves out sentence-transformers (PyTorch), faiss-cpu and implicit, which are only
 # used when PANTREE_HEAVY_RECOMMENDATIONS=1. Use requirements.txt for the full stack.
 pandas==3.1.0
@@ -9,7 +9,8 @@ uvicorn==0.54.0
 jinja2==3.1.6
 python-multipart==0.0.33
 python-dotenv==1.2.4
-supertokens-python==0.30.4
+authlib==1.6.5  # Google sign-in (OAuth 2.0 / OpenID Connect)
+itsdangerous==2.2.0  # signs the OAuth state cookie
 httpx==0.28.1
 phonenumbers==9.0.43
 duckdb==2.0.0

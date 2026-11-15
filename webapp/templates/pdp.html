@@ -1,32 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<style>
-.pdp-carousel{position:relative}
-.pdp-recommendation-track{display:flex;flex-flow:row nowrap;gap:14px;overflow-x:auto;overscroll-behavior-inline:contain;scroll-behavior:smooth;scroll-snap-type:x mandatory;padding:2px 3px 14px;scrollbar-width:none}
-.pdp-recommendation-track::-webkit-scrollbar{display:none}
-.pdp-recommendation-track>.card{flex:0 0 clamp(175px,calc((100% - 56px)/5),230px);scroll-snap-align:start}
-.pdp-recommendation-track>.card img{height:180px;object-fit:contain}
-.pdp-carousel-arrow{position:absolute;z-index:2;top:50%;transform:translateY(-50%);width:40px;height:40px;border:1px solid var(--line);border-radius:50%;background:#fff;color:var(--forest);font-size:25px;line-height:1;box-shadow:0 3px 12px rgba(18,60,54,.18);cursor:pointer}
-.pdp-carousel-arrow:hover{background:var(--mint)}
-.pdp-carousel-arrow[hidden]{display:none}
-.pdp-carousel-arrow.previous{left:-15px}
-.pdp-carousel-arrow.next{right:-15px}
-.pdp-image-frame{position:relative;min-width:0;background:#fff;border-radius:14px;padding:12px}
-.pdp-image-frame>img{display:block;width:100%;height:auto;max-height:560px;aspect-ratio:1/1;object-fit:contain;border-radius:10px}
-.pdp-image-frame>.wishlist-button{top:22px;right:22px;left:auto}
-.pdp-primary-card{min-width:0}
-.pdp-recommendation-track>.recommendation-card{flex-basis:clamp(195px,calc((100% - 56px)/5),245px);padding:10px}
-.pdp-recommendation-track .recommendation-card>a:first-of-type img{height:168px;object-fit:contain}
-.pdp-recommendation-track .recommendation-card .brand{margin-top:8px}
-.pdp-recommendation-track .recommendation-card .name{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;min-height:38px}
-.pdp-recommendation-track .recommendation-card .wishlist-button{top:17px;right:17px;left:auto}
-.pdp-recommendation-track .recommendation-card .rating{min-height:18px;font-size:12px}
-.pdp-recommendation-track .recommendation-prices{margin-top:5px}
-.pdp-recommendation-track .recommendation-stock{margin-top:5px}
-.pdp-recommendation-track .recommendation-cart,.pdp-recommendation-track .card-quantity{margin-top:8px}
-@media(max-width:600px){.pdp-recommendation-track>.card{flex-basis:72vw}.pdp-carousel-arrow.previous{left:2px}.pdp-carousel-arrow.next{right:2px}}
-</style>
-<div class="crumb">Home / {{ p.h1_category }} / {{ p.h2_category }} / {{ p.h3_category }}</div>
+<div class="crumb"><a href="/">Home</a> / <a href="/browse?department={{ p.h1_category|urlencode }}">{{ p.h1_category }}</a> / <a href="/browse?subcategory={{ p.h2_category|urlencode }}">{{ p.h2_category }}</a> / {{ p.h3_category }}</div>
 <article class="pdp-shell pdp-primary-card" data-product-id="{{ p.product_id }}" data-stock="{{ p.current_stock }}">
   <div class="pdp-image-frame">
   <img src="{{ p.image_url or ('https://loremflickr.com/500/500/' ~ (p.h3_category|replace(' ',',')|lower) ~ '?lock=' ~ p.product_id[5:]) }}"
@@ -38,31 +12,30 @@
           onclick="toggleWishlist('{{ p.product_id }}',this)">{{ '♥' if wishlisted else '♡' }}</button>
   </div>
   <div class="pdp-copy">
-    <div style="color:#565959;font-size:14px">{{ p.brand_name }}</div>
-    <h1 style="font-size:24px;margin:4px 0">{{ p.product_name }}</h1>
-    <div class="rating" style="font-size:15px">{{ '★' * (p.avg_rating|round(0,'floor')|int) if p.avg_rating else '' }} {{ p.avg_rating if p.avg_rating else 'No ratings yet' }}</div>
-    <hr style="margin:12px 0;border:none;border-top:1px solid #e3e6e6">
-    <div class="pdp-price"><span class="price" style="font-size:28px">₹{{ '{:,.0f}'.format(p.current_price) }}</span>
-         <span class="mrp">M.R.P: ₹{{ '{:,.0f}'.format(p.mrp) }}</span></div>
-    <p class="pdp-description" style="margin:14px 0;line-height:1.5">{{ p.product_description }}</p>
+    <div class="pdp-brand">{{ p.brand_name }}</div>
+    <h1>{{ p.product_name }}</h1>
+    <div class="rating pdp-rating">{{ '★' * (p.avg_rating|round(0,'floor')|int) if p.avg_rating else '' }} {{ p.avg_rating if p.avg_rating else 'No ratings yet' }}</div>
+    <div class="pdp-price"><span class="price">₹{{ '{:,.0f}'.format(p.current_price) }}</span>
+         {% if p.mrp and p.mrp > p.current_price %}<span class="mrp">M.R.P. ₹{{ '{:,.0f}'.format(p.mrp) }}</span><span class="discount">{{ ((1 - p.current_price / p.mrp) * 100)|round|int }}% off</span>{% endif %}</div>
+    <p class="pdp-description">{{ p.product_description }}</p>
     <div class="pdp-tags">
       {% for k,v in attrs.items() %}
-        {% if k != 'key_features' %}<span style="display:inline-block;background:#f0f2f2;border-radius:14px;padding:4px 12px;margin:3px;font-size:13px"><b>{{ k }}:</b> {{ v }}</span>{% endif %}
+        {% if k != 'key_features' %}<span class="tag"><b>{{ k }}:</b> {{ v }}</span>{% endif %}
       {% endfor %}
     </div>
     {% if p.current_stock and p.current_stock > 0 %}
-      <div class="stock-ok" style="font-size:15px">In stock — {{ p.current_stock }} available</div>
+      <div class="stock-ok pdp-stock">In stock — {{ p.current_stock }} available</div>
       <div class="pdp-actions">
         {% if cart_quantity %}
           <div class="card-quantity"><small>In your cart</small><div class="quantity-control"><button type="button" onclick="updateCartQuantity('{{ p.product_id }}',-1)" aria-label="Decrease quantity">−</button><output data-quantity>{{ cart_quantity }}</output><button type="button" onclick="updateCartQuantity('{{ p.product_id }}',1)" aria-label="Increase quantity">+</button></div></div>
         {% else %}
-          <button class="btn add-cart-button" onclick="addToCart('{{ p.product_id }}')">Add to Cart</button>
+          <button class="btn add-cart-button" type="button" onclick="addToCart('{{ p.product_id }}')">Add to cart</button>
         {% endif %}
-        <button class="btn btn-buy" onclick="addToCart('{{ p.product_id }}');setTimeout(()=>location='/cart',600)">Buy Now</button>
+        <button class="btn btn-buy" type="button" onclick="buyNow('{{ p.product_id }}')">Buy now</button>
       </div>
     {% else %}
-      <div class="stock-out" style="font-size:16px">Currently Out of Stock</div>
-      <p style="color:#565959;font-size:13px;margin-top:6px">Tip: use ⟳ Refresh Inventory (top bar) to restock.</p>
+      <div class="stock-out pdp-stock">Currently out of stock</div>
+      <p class="muted" style="font-size:13px;margin-top:6px">Demo tip: restock everything from <a class="text-link" href="/account#demo">Account → Demo tools</a>.</p>
     {% endif %}
     <div class="pdp-meta">Recommendations update from complementary products and similar styles below.</div>
   </div>
@@ -169,7 +142,7 @@ function renderRecommendationCard(item) {
 
   const stock = document.createElement("div");
   stock.className = "stock-ok recommendation-stock";
-  stock.textContent = `In stock (${Number(item.current_stock).toLocaleString("en-IN")})`;
+  stock.textContent = Number(item.current_stock) <= 5 ? `Only ${Number(item.current_stock)} left` : "In stock";
   card.append(wishlist, link, rating, prices, stock);
   applyRecommendationCartState(card, Number(item.cart_quantity || 0));
   if (window.PantreeRecs) PantreeRecs.track(card, item);
@@ -211,7 +184,7 @@ function applyRecommendationCartState(card, quantity) {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "btn add-cart-button recommendation-cart";
-  button.textContent = "Add to Cart";
+  button.textContent = "Add to cart";
   button.addEventListener("click", () => addToCart(productId));
   card.append(button);
 }

@@ -50,8 +50,8 @@ Customer data is split into two live-database tables joined by `customer_id`:
 Analysis and recommendation code only needs the dimension, so names, emails, phone numbers and
 addresses never leave the live database. Older databases are migrated automatically on start-up:
 personal columns are moved out of `customers` (and emails out of the legacy `auth` table) into
-`customer_pii`. Telling a visitor that an email "already exists" or "has no account" reveals
-whether it is registered; the OTP rate limits (applied before that check) throttle bulk probing.
+`customer_pii`. Shoppers edit both from **Your account → Personal details**; the email comes from
+their Google account and cannot be changed there.
 
 ### Where shopping activity is saved
 
@@ -61,8 +61,10 @@ or time spent on a page.
 
 | What the shopper does | What Pantree saves |
 |---|---|
-| Creates an account | Non-personal profile in `customers` (signup date, city/state/region, gender, age range, acquisition channel, marketing opt-ins, terms acceptance time); personal details in `customer_pii` (name, verified email, mobile); the sign-in link in `supertokens_customers`. Details wait in `pending_signups` until the code is verified (expires after 30 minutes). |
-| Signs in successfully | The sign-in link in `supertokens_customers` (first time on a device identity), a local session in `sessions`, and an `app_open` event. SuperTokens also stores the sign-in identity and session. |
+| Creates an account (first "Continue with Google") | A `customers` row (signup date, `acquisition_campaign = google_signup`, account status, terms acceptance time); a `customer_pii` row with the Google name and verified email; the Google account link in `auth_identities`. |
+| Signs in successfully | The Google account link in `auth_identities` (created the first time, or matched by verified email for an existing customer), a session in `sessions` (expires after 7 days), and an `app_open` event. |
+| Saves their profile | City (with its state and region), gender, age range, how they heard about Pantree and email/SMS opt-ins in `customers`; name, mobile and home address in `customer_pii`; a `profile_update` event in `clickstream`. |
+| Signs out | Their `sessions` row is deleted. |
 | Places an order | The delivery address is saved to `customer_pii` for the next checkout. |
 | Opens the home page | A `page_view` event in `clickstream`. |
 | Opens a category or browse page | A `category_view` event in `clickstream`. Filter and sort changes are not currently saved as separate events. |
@@ -115,7 +117,7 @@ of the card is on screen, and opening it adds a row to `recommendation_clicks`.
 | Parquet | A compact file format used for the tables in `data`. |
 | Postgres / SQLite | The live database: Postgres (Neon) when hosted, a SQLite file locally. |
 | DuckDB | A separate copy of live data for analysis. |
-| OTP | A one-time sign-in code sent to your email or phone. |
+| OAuth / OpenID Connect | The standard behind "Continue with Google": Google confirms who you are and Pantree never sees your password. |
 | Cold start | A shopper or product with too little history to personalise recommendations yet. |
 | Candidate | A product considered as a possible recommendation before ranking. |
 | ALS / FAISS | Collaborative filtering on views, carts and purchases / fast search for similar product descriptions. |

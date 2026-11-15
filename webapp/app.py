@@ -8,7 +8,7 @@ _BOOT = time.monotonic()
 
 
 def _boot_log(step: str) -> None:
-    """Start-up progress in the host's logs (Render shows nothing until the port opens)."""
+    """Start-up progress in the host's logs (nothing else appears until the port opens)."""
     print(f"[startup {time.monotonic() - _BOOT:5.1f}s] {step}", file=sys.stderr, flush=True)
 
 
@@ -17,7 +17,6 @@ _boot_log("importing the app")
 faulthandler.dump_traceback_later(60, repeat=True, file=sys.stderr)
 
 import asyncio
-import sqlite3
 from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -28,24 +27,18 @@ if not __package__:
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from supertokens_python.exceptions import SuperTokensError
-from supertokens_python.recipe.session.exceptions import TryRefreshTokenError
+from starlette.middleware.sessions import SessionMiddleware
 
 _boot_log("loading web framework, database layer, sign-in and recommender")
+from webapp import auth as signin
 from webapp import core, database
 from webapp.core import (
     DB,
-    TENANT_ID,
-    _normalize_login_identifier,
     _warm_recommendation_worker,
     db,
-    ensure_auth_tables,
-    ensure_customer_pii,
-    initialize_supertokens,
+    get_session,
     logger,
     os,
-    passwordless_async,
-    session_async,
     warm_homepage_caches,
 )
 from webapp.routes import auth, catalog, commerce, home
@@ -58,8 +51,8 @@ async def lifespan(_: FastAPI):
     app.state.homepage_feeds_ready = homepage_feeds_ready
 
     async def warm_secondary_recommendations():
-        # Warm in the background so uvicorn binds its port immediately; slow
-        # hosts (e.g. Render's free tier) otherwise time out the port scan.
+        # Warm in the background so uvicorn binds its port immediately; a cold
+        # Cloud Run instance otherwise waits for the caches before serving.
         try:
             await asyncio.to_thread(warm_homepage_caches)
         except Exception:
@@ -83,7 +76,15 @@ async def lifespan(_: FastAPI):
 app = FastAPI(title="Pantree Storefront", lifespan=lifespan)
 _boot_log("app created; the server will now open its port")
 faulthandler.cancel_dump_traceback_later()
-app.add_middleware(core.get_middleware())
+# Carries only the OAuth "state" between /auth/google/login and the callback (10 minutes).
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=signin.session_secret(),
+    session_cookie="pantree_oauth",
+    max_age=600,
+    same_site="lax",
+    https_only=signin.secure_cookies(),
+)
 static_dir = core.BASE / "static"
 if static_dir.exists():
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
@@ -139,53 +140,17 @@ async def protect_storefront_sessions(request: Request, call_next):
             )
 
     path = request.url.path
-    if (
-        path.startswith("/auth")
-        or path.startswith("/login")
-        or path.startswith("/signup")
-        or path.startswith("/static/")
-    ):
+    if path.startswith(("/auth", "/login", "/static/", "/healthz")):
         return await call_next(request)
 
-    sid = request.cookies.get("sid")
+    sid = request.cookies.get(signin.SESSION_COOKIE)
     if sid:
-        try:
-            auth_session = await session_async.get_session(
-                request,
-                session_required=True,
-                anti_csrf_check=False,
-            )
-        except TryRefreshTokenError:
-            try:
-                auth_session = await session_async.refresh_session(request)
-            except SuperTokensError:
-                auth_session = None
-        except SuperTokensError:
-            auth_session = None
-        if auth_session is None:
-            response = (
-                RedirectResponse("/login", status_code=303)
-                if "text/html" in request.headers.get("accept", "")
-                else JSONResponse(
-                    {"ok": False, "message": "Please sign in again."}, status_code=401
-                )
-            )
-            response.delete_cookie("sid", path="/")
-            return response
         con = db()
         try:
-            ensure_auth_tables(con)
-            local_session = con.execute(
-                """SELECT sc.customer_id FROM sessions s
-                   JOIN supertokens_customers sc
-                     ON sc.customer_id=s.customer_id
-                   WHERE s.session_id=? AND s.supertokens_session_handle=?
-                     AND sc.supertokens_user_id=?""",
-                (sid, auth_session.get_handle(), auth_session.get_user_id()),
-            ).fetchone()
+            session = get_session(con, sid)
         finally:
             con.close()
-        if not local_session:
+        if session is None:  # unknown, expired or signed out elsewhere
             response = (
                 RedirectResponse("/login", status_code=303)
                 if "text/html" in request.headers.get("accept", "")
@@ -193,48 +158,11 @@ async def protect_storefront_sessions(request: Request, call_next):
                     {"ok": False, "message": "Please sign in again."}, status_code=401
                 )
             )
-            response.delete_cookie("sid", path="/")
+            response.delete_cookie(signin.SESSION_COOKIE, path="/")
             return response
-        request.state.pantree_customer_id = local_session["customer_id"]
+        request.state.pantree_customer_id = session["customer_id"]
     return await call_next(request)
 
 
 for route_module in (auth, home, catalog, commerce):
     app.include_router(route_module.router)
-
-from webapp.routes.auth import (
-    _customer_for_verified_identity,
-    account_page,
-    login_otp_request,
-    login_otp_resend,
-    login_otp_verify,
-    login_page,
-    logout,
-    signup_otp_request,
-)
-from webapp.routes.catalog import browse, pdp, plp, search
-from webapp.routes.commerce import (
-    cart_add,
-    cart_page,
-    cart_remove,
-    cart_update,
-    checkout,
-    checkout_page,
-    orders_page,
-    refresh_inventory,
-    update_order_status,
-    wishlist_toggle,
-)
-from webapp.routes.home import home, recommendations_api
-from webapp.core import (
-    _catalog_price_bounds,
-    _catalog_stats,
-    _departments,
-    _filter_options,
-    _is_supertokens_core_error,
-    _log_otp_delivery_failure,
-    _normalize_login_identifier,
-    _parse_optional_float,
-    _price_range_bounds,
-    _subcategories,
-)

@@ -3,365 +3,66 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sign in or create an account · Pantree</title>
-<style>
-:root{--ink:#17312d;--muted:#6c7d77;--line:#dce9e2;--forest:#123c36;--coral:#e47759;--gold:#e8b657;--paper:#fff;--canvas:#f4f8f5}
-*{box-sizing:border-box}
-body{font-family:Inter,"Segoe UI",Arial,sans-serif;color:var(--ink);background:radial-gradient(circle at 8% 12%,#dceddf,transparent 30%),radial-gradient(circle at 90% 80%,#f9dfd3,transparent 30%),var(--canvas);margin:0;min-height:100vh;display:grid;place-items:center;padding:24px}
-.auth-shell{width:min(1020px,100%);display:grid;grid-template-columns:.85fr 1.15fr;background:var(--paper);border:1px solid var(--line);border-radius:24px;overflow:hidden;box-shadow:0 24px 60px rgba(18,60,54,.14)}
-.auth-intro{padding:48px;background:linear-gradient(145deg,#103a34,#246b59);color:#fff;position:relative;overflow:hidden}
-.auth-intro:after{content:"";position:absolute;width:270px;height:270px;border:1px solid rgba(255,255,255,.2);border-radius:50%;right:-100px;bottom:-100px;box-shadow:0 0 0 24px rgba(255,255,255,.05),0 0 0 48px rgba(255,255,255,.035)}
-.logo{font-family:Georgia,serif;font-size:34px;font-weight:700;letter-spacing:-1.5px}.logo span{color:#f1c66f}
-.auth-intro h1{font-family:Georgia,serif;font-size:42px;line-height:1.05;margin:80px 0 16px;max-width:330px}
-.auth-intro p{color:#d6e9df;line-height:1.7;max-width:330px}
-.auth-note{display:inline-block;margin-top:34px;color:#f4d78d;font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:700}
-.auth-form{padding:38px 44px;min-width:0}
-.tab{display:flex;gap:4px;background:#eff6f1;border-radius:10px;padding:4px;margin-bottom:28px}
-.tab button{flex:1;padding:11px;border:0;background:transparent;color:var(--muted);border-radius:7px;cursor:pointer;font-weight:800}
-.tab button.active{background:#fff;color:var(--forest);box-shadow:0 2px 8px rgba(18,60,54,.1)}
-.box h2{font-family:Georgia,serif;font-size:30px;margin:0 0 6px}
-.box h2:after{content:"";display:block;width:42px;height:3px;background:var(--coral);margin-top:12px;border-radius:3px}
-.auth-subtitle{color:var(--muted);font-size:13px;margin:0 0 20px;line-height:1.55}
-.box label{display:block;color:var(--muted);font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin:16px 0 7px}
-.box input,.box select{width:100%;padding:13px 12px;border:1px solid #cbdad2;border-radius:8px;background:#fbfdfb;color:var(--ink);font:inherit}
-.box input:focus,.box select:focus{outline:2px solid #b7d9c8;outline-offset:1px}
-.box form{max-height:calc(100vh - 180px);overflow:auto;padding-right:5px}
-.box form::-webkit-scrollbar{width:5px}.box form::-webkit-scrollbar-thumb{background:#c8dcd0;border-radius:8px}
-.box .btn{width:100%;margin-top:22px;background:var(--forest);color:#fff;border:0;padding:13px;border-radius:8px;font-weight:800;cursor:pointer;box-shadow:0 7px 14px rgba(18,60,54,.16)}
-.box .btn:hover{background:#1b5a4e}.box .btn:disabled{opacity:.65;cursor:wait}
-.msg{color:#a9472e;background:#fff1ed;border:1px solid #f2c5b8;padding:11px;border-radius:8px;font-size:13px;margin-bottom:14px}
-.msg.success{color:#176348;background:#eff8f2;border-color:#cce7d5}
-.box small{display:block;color:var(--muted);font-size:11px;margin-top:12px;line-height:1.5}
-.box input[type=checkbox]{width:auto;margin-right:6px;accent-color:var(--forest)}
-.box label:has(input[type=checkbox]){display:flex;align-items:center;letter-spacing:0;text-transform:none;font-size:12px;color:var(--muted);font-weight:600}
-.otp-code{font-size:24px!important;font-weight:750;letter-spacing:.3em;text-align:center;font-variant-numeric:tabular-nums}
-.otp-actions{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:14px}
-.text-button{border:0;background:none;color:var(--forest);font:inherit;font-weight:750;padding:7px 0;cursor:pointer}
-.text-button:disabled{color:#9aa8a2;cursor:default}
-.security-note{display:flex;gap:9px;align-items:flex-start;color:var(--muted);font-size:12px;line-height:1.5;margin-top:20px}
-.security-note span{color:var(--forest);font-size:16px}
-.row2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
-.optional{color:#9aa8a2;font-weight:600;text-transform:none;letter-spacing:0}
-.consents{margin-top:14px}.consents label{margin:8px 0}
-.box a{color:var(--forest);font-weight:700}
-#auth-action{display:block;margin:-6px 0 14px}
-@media(max-width:760px){.row2{grid-template-columns:1fr}body{padding:12px}.auth-shell{display:block;border-radius:18px}.auth-intro{padding:24px 28px}.auth-intro h1{font-size:30px;margin:28px 0 9px}.auth-intro p{font-size:13px}.auth-note{margin-top:12px}.auth-form{padding:26px 22px}.box form{max-height:none}}
-</style>
+<meta name="theme-color" content="#0f3d35">
+<title>Sign in · Pantree</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/pantree.css?v={{ asset_version }}">
 </head>
 <body>
-{% if email_enabled and phone_enabled %}
-  {% set contact_label = "Email or mobile number" %}
-  {% set contact_examples = "you@example.com or +1 415 555 2671" %}
-  {% set contact_type = "text" %}
-  {% set contact_mode = "email" %}
-  {% set channel_description = "email or mobile number" %}
-{% elif email_enabled %}
-  {% set contact_label = "Email address" %}
-  {% set contact_examples = "you@example.com" %}
-  {% set contact_type = "email" %}
-  {% set contact_mode = "email" %}
-  {% set channel_description = "email" %}
-{% elif phone_enabled %}
-  {% set contact_label = "Mobile number" %}
-  {% set contact_examples = "+1 415 555 2671" %}
-  {% set contact_type = "tel" %}
-  {% set contact_mode = "tel" %}
-  {% set channel_description = "mobile number" %}
-{% else %}
-  {% set contact_label = "Contact" %}
-  {% set contact_examples = "" %}
-  {% set contact_type = "text" %}
-  {% set contact_mode = "text" %}
-  {% set channel_description = "email or mobile number" %}
-{% endif %}
-<main class="auth-shell">
-  <section class="auth-intro">
-    <div class="logo">Pan<span>tree</span></div>
-    <h1>Everyday pieces, well chosen.</h1>
-    <p>A considered storefront for real products, thoughtful details, and an easier way to shop.</p>
-    <span class="auth-note">Curated for your everyday</span>
+<div class="auth-page">
+  <section class="auth-brand" aria-label="About Pantree">
+    <a href="/login" class="logo">Pan<span>tree</span></a>
+    <div>
+      <h1>Everyday pieces, <em>picked for you.</em></h1>
+      <p>A fashion store whose home page learns from what you browse and buy, with a recommender evaluated on real held-out orders.</p>
+      <ul class="auth-points">
+        <li>Apparel, footwear and accessories from a real catalogue</li>
+        <li>Recommendations that update as you shop</li>
+        <li>Demo checkout: no card is ever charged</li>
+      </ul>
+    </div>
+    <small>Pantree is a portfolio demo. Customers, prices and orders are simulated.</small>
   </section>
-  <section class="auth-form">
-    <div class="box">
-      <div class="tab">
-        <button id="tl" class="active" type="button" onclick="show('login')">Sign in</button>
-        <button id="ts" type="button" onclick="show('signup')">Create account</button>
+
+  <section class="auth-panel">
+    <div class="auth-card">
+      <div class="eyebrow">Welcome</div>
+      <h2>Sign in or create an account</h2>
+      <p class="muted">One step with your Google account. If you're new, we'll set up your Pantree account automatically.</p>
+
+      {% if error %}<div class="alert alert-error" role="alert">{{ error }}</div>{% endif %}
+      {% if msg %}<div class="alert alert-ok" role="status">{{ msg }}</div>{% endif %}
+
+      {% if google_enabled %}
+      <a class="google-btn" href="/auth/google/login">
+        <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>
+        Continue with Google
+      </a>
+      <div class="auth-steps">
+        <span><b>Already shopped with us?</b> You'll go straight to your account.</span>
+        <span><b>New to Pantree?</b> Your account is created from your Google name and email; add your city, phone and address in your profile afterwards.</span>
       </div>
-      {% if msg %}<div class="msg" role="alert">{{ msg }}</div>{% endif %}
-      <div id="auth-message" class="msg" role="status" aria-live="polite" hidden></div>
-      <button id="auth-action" class="text-button" type="button" hidden></button>
+      {% elif not dev_login %}
+      <div class="alert alert-info">Google sign-in is not configured on this server yet. Set <code>GOOGLE_CLIENT_ID</code> and <code>GOOGLE_CLIENT_SECRET</code>.</div>
+      {% endif %}
 
-      <section id="login">
-        <div id="identifier-step">
-          <h2>Welcome back</h2>
-          <p class="auth-subtitle">Sign in with a one-time code sent to your {{ channel_description }}. New here? <a href="#" onclick="show('signup');return false;">Create an account</a>.</p>
-          {% if not email_enabled and not phone_enabled %}
-          <div class="msg" role="alert">Sign-in is temporarily unavailable. Please try again later.</div>
-          {% endif %}
-          <form id="otp-request">
-            <label for="identifier">{{ contact_label }}</label>
-            <input id="identifier" name="identifier" type="{{ contact_type }}" autocomplete="username" inputmode="{{ contact_mode }}" placeholder="{{ contact_examples }}" {% if not email_enabled and not phone_enabled %}disabled{% endif %} required>
-            <label for="device">Device</label>
-            <select id="device" name="device">
-              <option>Desktop Web</option><option>Android App</option><option>iOS App</option><option>Mobile Web</option>
-            </select>
-            <button class="btn" type="submit" {% if not email_enabled and not phone_enabled %}disabled{% endif %}>Continue with OTP</button>
-            <div class="security-note"><span aria-hidden="true">🔒</span><div>Your one-time code is private. Never share it with anyone, including Pantree support.</div></div>
-          </form>
-        </div>
-        <div id="code-step" hidden>
-          <h2>Verify your sign-in</h2>
-          <p class="auth-subtitle" id="code-destination">Enter the 6-digit code sent to your {{ channel_description }}.</p>
-          <form id="otp-verify">
-            <input type="hidden" name="device_id" id="device-id">
-            <input type="hidden" name="pre_auth_session_id" id="pre-auth-session-id">
-            <input type="hidden" name="device" id="verify-device">
-            <label for="otp-code">One-time code</label>
-            <input id="otp-code" class="otp-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="------" aria-label="6-digit one-time code" required>
-            <button id="verify-submit" class="btn" type="submit">Verify and sign in</button>
-          </form>
-          <div class="otp-actions">
-            <button class="text-button" type="button" onclick="backToIdentifier()">← Change contact</button>
-            <button class="text-button" id="resend-code" type="button" disabled onclick="requestCode(true)">Send a new code</button>
-          </div>
-          <small>For your security, codes expire after 5 minutes and can only be used once.</small>
-        </div>
-      </section>
+      {% if dev_login %}
+      <div class="auth-divider">Local development only</div>
+      <form class="dev-form" method="post" action="/auth/dev-login">
+        <label class="sr-only" for="dev-name">Name</label>
+        <input id="dev-name" name="name" placeholder="Your name" autocomplete="name">
+        <label class="sr-only" for="dev-email">Email</label>
+        <input id="dev-email" name="email" type="email" placeholder="you@example.com" required autocomplete="email">
+        <button class="btn btn-block" type="submit">Developer sign-in</button>
+        <small class="muted">Shown because <code>APP_ENV=development</code> and no Google client is configured. Never available in production.</small>
+      </form>
+      {% endif %}
 
-      <section id="signup" style="display:none">
-        <h2>Create your account</h2>
-        <p class="auth-subtitle">Tell us a little about yourself. We'll send a one-time code to verify your {% if email_enabled %}email{% else %}mobile number{% endif %}, and create your account once it's confirmed.</p>
-        {% if not email_enabled and not phone_enabled %}
-        <div class="msg" role="alert">Sign-up is temporarily unavailable. Please try again later.</div>
-        {% endif %}
-        <form id="signup-form" novalidate>
-          <div class="row2">
-            <div><label for="signup-first-name">First name</label>
-              <input id="signup-first-name" name="first_name" autocomplete="given-name" maxlength="60" required></div>
-            <div><label for="signup-last-name">Last name <span class="optional">(optional)</span></label>
-              <input id="signup-last-name" name="last_name" autocomplete="family-name" maxlength="60"></div>
-          </div>
-          <label for="signup-identifier">Email address</label>
-          <input id="signup-identifier" name="email" type="email" autocomplete="email" placeholder="you@example.com" required>
-          <label for="signup-phone">Mobile number {% if email_enabled %}<span class="optional">(optional)</span>{% endif %}</label>
-          <input id="signup-phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" placeholder="98765 43210 or +91 98765 43210" {% if not email_enabled %}required{% endif %}>
-          <label for="signup-city">City</label>
-          <select id="signup-city" name="city" required>
-            <option value="">Choose your city</option>
-            {% for city, (state, region) in cities.items()|sort %}<option value="{{ city }}">{{ city }}, {{ state }}</option>{% endfor %}
-            <option value="Other">Other city</option>
-          </select>
-          <div class="row2">
-            <div><label for="signup-gender">Gender <span class="optional">(optional)</span></label>
-              <select id="signup-gender" name="gender">
-                {% for value, label in genders.items() %}<option value="{{ value }}" {% if value == "Prefer not to say" %}selected{% endif %}>{{ label }}</option>{% endfor %}
-              </select></div>
-            <div><label for="signup-age">Age range <span class="optional">(optional)</span></label>
-              <select id="signup-age" name="age_bracket">
-                <option value="">Prefer not to say</option>
-                {% for bracket in age_brackets %}<option>{{ bracket }}</option>{% endfor %}
-              </select></div>
-          </div>
-          <label for="signup-heard">How did you hear about us? <span class="optional">(optional)</span></label>
-          <select id="signup-heard" name="heard_from">
-            <option value="">Choose one</option>
-            {% for value, label in heard_from_choices.items() %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
-          </select>
-          <label for="signup-device">Device</label>
-          <select id="signup-device" name="device">
-            <option>Desktop Web</option><option>Android App</option><option>iOS App</option><option>Mobile Web</option>
-          </select>
-          <div class="consents">
-            <label><input type="checkbox" name="email_opt_in" value="1">Email me offers and new arrivals</label>
-            <label><input type="checkbox" name="sms_opt_in" value="1">Text me offers and order updates</label>
-            <label><input type="checkbox" id="signup-terms" name="accept_terms" value="1" required>I agree to the terms of use and privacy policy</label>
-          </div>
-          <button class="btn" type="submit" {% if not email_enabled and not phone_enabled %}disabled{% endif %}>Create account and send code</button>
-          <small>Your account is created only after you verify the code. Already have one? <a href="#" onclick="show('login');return false;">Sign in</a>.</small>
-        </form>
-      </section>
+      <p class="auth-legal">By continuing you agree to Pantree's demo terms and privacy policy. We only receive your name, email address and profile photo from Google.</p>
     </div>
   </section>
-</main>
-<script>
-const requestForm=document.getElementById("otp-request");
-const verifyForm=document.getElementById("otp-verify");
-const authMessage=document.getElementById("auth-message");
-const resendButton=document.getElementById("resend-code");
-const identifierField=document.getElementById("identifier");
-const signupIdentifierField=document.getElementById("signup-identifier");
-const signupForm=document.getElementById("signup-form");
-const authAction=document.getElementById("auth-action");
-const phoneEnabled={{ phone_enabled|tojson }};
-let activeAuthView="login";
-let resendTimer;
-
-if(phoneEnabled)identifierField.addEventListener("input",()=>{
-  identifierField.inputMode=identifierField.value.includes("@")?"email":"tel";
-});
-function show(view){
-  const isLogin=view==="login";
-  activeAuthView=view;
-  document.getElementById("identifier-step").hidden=false;
-  document.getElementById("code-step").hidden=true;
-  document.getElementById("login").style.display=isLogin?"block":"none";
-  document.getElementById("signup").style.display=isLogin?"none":"block";
-  document.getElementById("tl").classList.toggle("active",isLogin);
-  document.getElementById("ts").classList.toggle("active",!isLogin);
-  authMessage.hidden=true;
-  authAction.hidden=true;
-}
-function offerSwitch(code,contact){
-  // "Already exists" sends people to sign in; "not found" sends them to sign up.
-  if(code==="account_exists"){
-    authAction.textContent="Sign in instead →";
-    authAction.onclick=()=>{show("login");if(contact&&contact.includes("@"))identifierField.value=contact;identifierField.focus();};
-  }else if(code==="account_not_found"){
-    authAction.textContent="Create an account →";
-    authAction.onclick=()=>{show("signup");if(contact&&contact.includes("@"))signupIdentifierField.value=contact;document.getElementById("signup-first-name").focus();};
-  }else{authAction.hidden=true;return;}
-  authAction.hidden=false;
-}
-function setMessage(message,success=false){
-  authMessage.textContent=message;
-  authMessage.classList.toggle("success",success);
-  authMessage.hidden=false;
-}
-async function readApiResponse(response){
-  if(!(response.headers.get("content-type")||"").includes("application/json")){
-    throw new Error(response.ok
-      ?"The server returned an unexpected response. Please try again."
-      :`The request failed (HTTP ${response.status}). Please try again.`);
-  }
-  try{
-    return await response.json();
-  }catch{
-    throw new Error("The server returned an invalid response. Please try again.");
-  }
-}
-function startResendTimer(seconds=30){
-  clearInterval(resendTimer);
-  let remaining=seconds;
-  resendButton.disabled=true;
-  resendButton.textContent=`Send a new code in ${remaining}s`;
-  resendTimer=setInterval(()=>{
-    remaining-=1;
-    if(remaining<=0){
-      clearInterval(resendTimer);
-      resendButton.disabled=false;
-      resendButton.textContent="Send a new code";
-    }else resendButton.textContent=`Send a new code in ${remaining}s`;
-  },1000);
-}
-async function requestCode(resend=false){
-  const button=resend||activeAuthView==="login"
-    ?requestForm.querySelector("button[type=submit]")
-    :signupForm.querySelector("button[type=submit]");
-  const identifier=(activeAuthView==="login"?identifierField:signupIdentifierField).value.trim();
-  if(!resend&&!identifier){(activeAuthView==="login"?identifierField:signupIdentifierField).focus();return;}
-  if(!resend&&activeAuthView==="signup"&&!signupForm.reportValidity())return;
-  authAction.hidden=true;
-  const requestedView=activeAuthView;
-  const originalButtonText=button.textContent;
-  button.disabled=true;
-  button.textContent="Sending…";
-  if(!resend){
-    document.getElementById("device-id").value="";
-    document.getElementById("pre-auth-session-id").value="";
-    document.getElementById("verify-device").value="";
-    document.getElementById("otp-code").value="";
-    document.getElementById("verify-submit").disabled=true;
-    document.getElementById("identifier-step").hidden=true;
-    document.getElementById("code-step").hidden=false;
-    document.getElementById("login").style.display="block";
-    document.getElementById("signup").style.display="none";
-    document.getElementById("code-destination").textContent="Sending your sign-in code…";
-    setMessage("Sending your sign-in code…",true);
-  }
-  try{
-    const signingUp=!resend&&requestedView==="signup";
-    const body=signingUp?new FormData(signupForm):new FormData();
-    const url=resend?"/login/otp/resend":signingUp?"/signup/otp/request":"/login/otp/request";
-    if(resend)body.append("device_id",document.getElementById("device-id").value);
-    else if(!signingUp){
-      body.append("identifier",identifier);
-      body.append("device",document.getElementById("device").value);
-    }
-    const response=await fetch(url,{method:"POST",body});
-    const result=await readApiResponse(response);
-    if(!response.ok){
-      const error=new Error(result.message||"Unable to send a sign-in code.");
-      error.code=result.code;
-      throw error;
-    }
-    document.getElementById("device-id").value=result.device_id;
-    document.getElementById("pre-auth-session-id").value=result.pre_auth_session_id;
-    document.getElementById("verify-submit").disabled=false;
-    if(!resend){
-      show(requestedView);
-      document.getElementById("identifier-step").hidden=true;
-      document.getElementById("code-step").hidden=false;
-      document.getElementById("verify-device").value=(requestedView==="signup"?document.getElementById("signup-device"):document.getElementById("device")).value;
-    }
-    document.getElementById("login").style.display="block";
-    document.getElementById("signup").style.display="none";
-    const destination=result.channel==="email"?"email":"phone";
-    document.getElementById("code-destination").textContent=`Enter the 6-digit code sent to your ${destination}.`;
-    if(!resend)document.getElementById("otp-code").focus();
-    setMessage(resend?"A new code has been requested.":"Your code has been sent.",true);
-    startResendTimer();
-  }catch(error){
-    if(!resend){
-      show(requestedView);
-      document.getElementById("verify-submit").disabled=false;
-    }
-    setMessage(error.message||"Unable to send a sign-in code.");
-    offerSwitch(error.code,identifier);
-  }finally{
-    button.textContent=originalButtonText;
-    button.disabled=false;
-  }
-}
-requestForm.addEventListener("submit",event=>{event.preventDefault();requestCode();});
-signupForm.addEventListener("submit",event=>{event.preventDefault();requestCode();});
-verifyForm.addEventListener("submit",async event=>{
-  event.preventDefault();
-  const button=verifyForm.querySelector("button[type=submit]");
-  const originalButtonText=button.textContent;
-  button.disabled=true;
-  button.textContent="Verifying…";
-  setMessage("Verifying your code and opening the store…",true);
-  try{
-    const response=await fetch("/login/otp/verify",{
-      method:"POST",
-      headers:{"st-auth-mode":"cookie"},
-      body:new FormData(verifyForm)
-    });
-    const result=await readApiResponse(response);
-    if(!response.ok){
-      const error=new Error(result.message||"Unable to verify that code.");
-      error.code=result.code;
-      throw error;
-    }
-    location.assign(result.redirect_url||"/");
-  }catch(error){
-    setMessage(error.message||"Unable to verify that code.");
-    offerSwitch(error.code,"");
-    document.getElementById("otp-code").focus();
-  }finally{
-    button.textContent=originalButtonText;
-    button.disabled=false;
-  }
-});
-function backToIdentifier(){
-  clearInterval(resendTimer);
-  document.getElementById("code-step").hidden=true;
-  document.getElementById("identifier-step").hidden=false;
-  document.getElementById("login").style.display=activeAuthView==="login"?"block":"none";
-  document.getElementById("signup").style.display=activeAuthView==="signup"?"block":"none";
-  (activeAuthView==="login"?identifierField:signupIdentifierField).focus();
-  authMessage.hidden=true;
-}
-</script>
+</div>
 </body>
 </html>

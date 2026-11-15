@@ -1,35 +1,41 @@
 {% extends "base.html" %}
 {% block content %}
-<h2 class="section">Your Orders</h2>
-{% if not orders %}<p>No orders yet. Start shopping.</p>{% endif %}
+<div class="crumb"><a href="/">Home</a> / Orders</div>
+<h1 class="page-title">Your orders</h1>
+{% if not orders %}
+<div class="panel empty-state">
+  <h3>No orders yet</h3>
+  <p class="muted">When you check out, your orders and their status appear here.</p>
+  <a class="btn" href="/browse">Start shopping</a>
+</div>
+{% endif %}
 {% for o in orders %}
 <div class="order-card">
   <div class="order-header">
-    <div><b>Order {{ o.order_id }}</b><div style="color:#666;font-size:12px">{{ o.order_timestamp }}</div></div>
-    <div><b>{{ o.order_status }}</b><div style="color:#666;font-size:12px">₹{{ '{:,.0f}'.format(o.total_amount) }}</div></div>
+    <div><b>Order {{ o.order_id }}</b><small>Placed {{ (o.order_timestamp or '')|replace('T', ' at ') }}</small></div>
+    <div style="text-align:right"><span class="status status-{{ (o.order_status or '')|lower|replace(' ', '-') }}">{{ o.order_status }}</span><small>₹{{ '{:,.0f}'.format(o.total_amount) }}</small></div>
   </div>
   {% for it in lines.get(o.order_id, []) %}
   <div class="order-product">
-    <img src="{{ it.image_url }}" style="width:90px;height:90px;object-fit:cover;border-radius:6px" onerror="imgFallback(this)" data-name="{{ it.product_name }}" data-cat="{{ it.h3_category }}">
-    <div style="flex:1">
+    <img src="{{ it.image_url }}" onerror="imgFallback(this)" data-name="{{ it.product_name }}" data-cat="{{ it.h3_category }}" alt="{{ it.product_name }}">
+    <div>
       <a href="/product/{{ it.product_id }}"><b>{{ it.product_name }}</b></a>
-      <div style="font-size:13px;color:#666">Qty {{ it.quantity }} · ₹{{ '{:,.0f}'.format(it.net_item_value) }}</div>
-      <div style="margin-top:5px;font-weight:600">{{ it.order_status }}</div>
+      <div class="item-meta">Qty {{ it.quantity }} · ₹{{ '{:,.0f}'.format(it.net_item_value) }} · {{ it.order_status }}</div>
     </div>
   </div>
   {% endfor %}
   {% if o.order_status == 'Placed' %}
   <div class="order-actions">
-    <form method="post" action="/orders/{{ o.order_id }}/status"><input type="hidden" name="action" value="deliver"><button class="btn btn-buy" type="submit">Mark Delivered</button></form>
-    <form method="post" action="/orders/{{ o.order_id }}/status"><input type="hidden" name="action" value="cancel"><button class="btn" type="submit">Cancel Order</button></form>
+    <form method="post" action="/orders/{{ o.order_id }}/status"><input type="hidden" name="action" value="deliver"><button class="btn btn-accent" type="submit">Mark delivered</button></form>
+    <form method="post" action="/orders/{{ o.order_id }}/status"><input type="hidden" name="action" value="cancel"><button class="btn btn-ghost" type="submit">Cancel order</button></form>
   </div>
-  <small class="order-note">Cancel before delivery to restore the units to inventory and refund the payment.</small>
+  <small class="order-note">Demo store: mark the order delivered to try returns, or cancel it to refund the payment and restock the items.</small>
   {% elif o.order_status in ['Delivered','Partially Returned'] %}
   <div class="order-actions">
-    <form method="post" action="/orders/{{ o.order_id }}/status"><input type="hidden" name="action" value="return"><button class="btn" type="submit">Return Order</button></form>
-    <form method="post" action="/orders/{{ o.order_id }}/status"><input type="hidden" name="action" value="replace"><button class="btn btn-buy" type="submit">Replace Order</button></form>
+    <form method="post" action="/orders/{{ o.order_id }}/status"><input type="hidden" name="action" value="return"><button class="btn btn-ghost" type="submit">Return order</button></form>
+    <form method="post" action="/orders/{{ o.order_id }}/status"><input type="hidden" name="action" value="replace"><button class="btn btn-accent" type="submit">Replace order</button></form>
   </div>
-  <small class="order-note">Returns add the units back to inventory. Same-SKU replacement returns the old unit and issues a replacement unit.</small>
+  <small class="order-note">Returns add the units back to inventory. A replacement returns the old unit and ships a new one of the same item.</small>
   {% endif %}
 </div>
 {% endfor %}

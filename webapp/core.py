@@ -1,100 +1,53 @@
-"""Shared storefront configuration, database access, and view helpers."""
+"""Shared storefront configuration, database access, and view helpers.
 
-"""Pantree storefront — FastAPI backend.
-SQLite is the live OLTP source of truth. Every user activity is written to SQLite
-and mirrored to DuckDB for analytics/model training.
+The live database (Postgres when DATABASE_URL is set, SQLite otherwise) is the source of truth.
+Every user activity is written there and, optionally, mirrored to DuckDB for analytics.
 """
 
-import asyncio, json, logging, os, re, sqlite3, sys, time, uuid
-
 import datetime as dt
-
-from contextlib import asynccontextmanager
-
+import json
+import logging
+import os
+import re
+import sys
+import time
+import uuid
 from pathlib import Path
-
 from urllib.parse import urlsplit
 
-from fastapi import FastAPI, Request, Form, Cookie
-
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
-
-from fastapi.staticfiles import StaticFiles
-
-from fastapi.templating import Jinja2Templates
-
-from dotenv import load_dotenv
-
-from aiosmtplib.errors import SMTPException
-
-import httpx
-
 import phonenumbers
-
-from supertokens_python.exceptions import SuperTokensError
-
-from supertokens_python.framework.fastapi import get_middleware
-
-from supertokens_python.recipe.passwordless import asyncio as passwordless_async
-
-from supertokens_python.recipe.passwordless.interfaces import (
-    ConsumeCodeExpiredUserInputCodeError,
-    ConsumeCodeIncorrectUserInputCodeError,
-    ConsumeCodeOkResult,
-    ConsumeCodeRestartFlowError,
-    CreateNewCodeForDeviceOkResult,
-)
-
-from supertokens_python.recipe.passwordless.types import (
-    PasswordlessLoginEmailTemplateVars,
-    PasswordlessLoginSMSTemplateVars,
-)
-
-from supertokens_python.recipe.session import asyncio as session_async
-
-from supertokens_python.recipe.session.exceptions import TryRefreshTokenError
-
+from dotenv import load_dotenv
+from fastapi import Cookie, Form, Request
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
 from starlette.concurrency import run_in_threadpool
 
 try:
-    from . import database
+    from . import auth, database
+    from .account_reset import reset_customer_activity
     from .analytics_sync import (
-        mirror_event,
+        forget_customer_activity,
         mirror_customer,
-        mirror_order,
-        mirror_transaction,
+        mirror_event,
         mirror_inventory,
         mirror_inventory_movement,
+        mirror_order,
         mirror_return,
-        forget_customer_activity,
-    )
-    from .account_reset import reset_customer_activity
-    from .auth import (
-        TENANT_ID,
-        delivery_channel_configured,
-        initialize_supertokens,
-        release_otp_request,
-        reserve_otp_request,
+        mirror_transaction,
     )
 except ImportError:
+    import auth
     import database
+    from account_reset import reset_customer_activity
     from analytics_sync import (
-        mirror_event,
+        forget_customer_activity,
         mirror_customer,
-        mirror_order,
-        mirror_transaction,
+        mirror_event,
         mirror_inventory,
         mirror_inventory_movement,
+        mirror_order,
         mirror_return,
-        forget_customer_activity,
-    )
-    from account_reset import reset_customer_activity
-    from auth import (
-        TENANT_ID,
-        delivery_channel_configured,
-        initialize_supertokens,
-        release_otp_request,
-        reserve_otp_request,
+        mirror_transaction,
     )
 
 BASE = Path(__file__).resolve().parent
@@ -106,11 +59,6 @@ load_dotenv(ROOT / ".env")
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-try:
-    from .geo import GEO  # cities/states/regions for the sign-up form
-except ImportError:
-    from geo import GEO
-
 from recommendations.serve import (
     recommend as ml_recommend,
     warm_homepage_caches,
@@ -121,7 +69,7 @@ DB = Path(os.getenv("PANTREE_DB_PATH", str(BASE / "pantree_app.db"))).expanduser
 
 logger = logging.getLogger("webapp.app")
 
-initialize_supertokens()
+auth.check_configuration()
 
 
 def _warm_recommendation_worker():
@@ -143,6 +91,8 @@ def _warm_recommendation_worker():
 
 
 tpl = Jinja2Templates(directory=str(BASE / "templates"))
+# Appended to static asset URLs so browsers fetch new CSS/JS after a deploy.
+tpl.env.globals["asset_version"] = os.getenv("K_REVISION") or str(int(time.time()))
 
 
 def db():
@@ -276,14 +226,15 @@ def ensure_sessions(con):
         return
     con.execute("""CREATE TABLE IF NOT EXISTS sessions (
         session_id TEXT PRIMARY KEY, customer_id TEXT, device_type TEXT, created_at TEXT,
-        supertokens_session_handle TEXT)""")
-    if "supertokens_session_handle" not in database.table_columns(con, "sessions"):
-        con.execute("ALTER TABLE sessions ADD COLUMN supertokens_session_handle TEXT")
+        expires_at TEXT)""")
+    if "expires_at" not in database.table_columns(con, "sessions"):
+        # Sessions from before Google sign-in have no expiry and are no longer valid.
+        con.execute("ALTER TABLE sessions ADD COLUMN expires_at TEXT")
     con.commit()
 
 
 def ensure_customer_pii(con):
-    """Create customer_pii / pending_signups and move legacy PII out of customers.
+    """Create customer_pii and move legacy PII out of customers.
 
     Idempotent and cheap once migrated: it only copies rows that still have
     personal data in `customers` or an email in the legacy `auth` table.
@@ -295,11 +246,6 @@ def ensure_customer_pii(con):
             home_address_line1 TEXT, home_address_line2 TEXT,
             home_postal_code TEXT, home_country TEXT,
             created_at TEXT, updated_at TEXT
-        )""")
-    con.execute("""CREATE TABLE IF NOT EXISTS pending_signups (
-            device_id TEXT PRIMARY KEY,
-            payload TEXT NOT NULL,
-            created_at REAL NOT NULL
         )""")
     tables = database.table_names(con)
     customer_columns = set(database.table_columns(con, "customers")) if "customers" in tables else set()
@@ -353,20 +299,32 @@ def ensure_customer_pii(con):
     con.commit()
 
 
+# Tables of the retired SuperTokens / one-time-code sign-in; dropped on first start.
+RETIRED_AUTH_TABLES = ("supertokens_customers", "pending_signups", "auth_rate_limits")
+
+
 def ensure_auth_tables(con):
     if _already_checked(con, "auth_tables"):
         return
     ensure_sessions(con)
     _ensure_customer_schema(con)  # dimension columns + customer_pii
-    con.execute("""CREATE TABLE IF NOT EXISTS supertokens_customers (
-            supertokens_user_id TEXT PRIMARY KEY,
+    con.execute("""CREATE TABLE IF NOT EXISTS auth_identities (
+            provider TEXT NOT NULL,
+            subject TEXT NOT NULL,
             customer_id TEXT NOT NULL,
-            created_at TEXT NOT NULL
+            email TEXT,
+            created_at TEXT NOT NULL,
+            last_login_at TEXT,
+            picture_url TEXT,
+            PRIMARY KEY (provider, subject)
         )""")
     con.execute(
-        "CREATE INDEX IF NOT EXISTS ix_supertokens_customers_customer "
-        "ON supertokens_customers(customer_id)"
+        "CREATE INDEX IF NOT EXISTS ix_auth_identities_customer ON auth_identities(customer_id)"
     )
+    existing = database.table_names(con)
+    for table in RETIRED_AUTH_TABLES:
+        if table in existing:
+            con.execute(f"DROP TABLE {table}")
     con.commit()
 
 
@@ -381,6 +339,7 @@ def ensure_wishlist(con):
 
 
 def _normalize_login_identifier(value):
+    """("email", address) or ("phone", E.164 number); unprefixed 10-digit numbers are Indian."""
     value = value.strip()
     if "@" in value:
         if len(value) > 254 or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", value):
@@ -404,59 +363,14 @@ def _normalize_login_identifier(value):
 
 
 def get_session(con, sid):
+    """The signed-in session for this cookie, or None if it is unknown or expired."""
     ensure_sessions(con)
     if not sid:
         return None
-    return con.execute("SELECT * FROM sessions WHERE session_id=?", (sid,)).fetchone()
-
-
-async def _deliver_passwordless_code(channel, recipient, result):
-    template_values = {
-        "tenant_id": TENANT_ID,
-        "code_life_time": result.code_life_time,
-        "pre_auth_session_id": result.pre_auth_session_id,
-        "is_first_factor": True,
-        "user_input_code": result.user_input_code,
-        "url_with_link_code": None,
-    }
-    if channel == "email":
-        await passwordless_async.send_email(
-            PasswordlessLoginEmailTemplateVars(email=recipient, **template_values)
-        )
-    else:
-        await passwordless_async.send_sms(
-            PasswordlessLoginSMSTemplateVars(phone_number=recipient, **template_values)
-        )
-
-
-def _log_otp_delivery_failure(operation: str, exc: Exception) -> None:
-    provider_status = (
-        exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else None
-    )
-    failure_reason = None
-    if isinstance(exc, RuntimeError):
-        failure_reasons = {
-            "OpenSMS returned an invalid response.": "opensms_invalid_response",
-            "OpenSMS reported that SMS delivery failed.": "opensms_rejected_delivery",
-            "PANTREE_RATE_LIMIT_SECRET must contain at least 32 characters.": "rate_limit_secret_invalid",
-            "The local OTP rate-limit key is invalid.": "rate_limit_key_invalid",
-        }
-        failure_reason = failure_reasons.get(str(exc), "runtime_error")
-    logger.error(
-        "SuperTokens could not %s an OTP "
-        "(error_type=%s, provider_status=%s, failure_reason=%s)",
-        operation,
-        type(exc).__name__,
-        provider_status,
-        failure_reason,
-    )
-
-
-def _is_supertokens_core_error(exc: Exception) -> bool:
-    message = str(exc)
-    return message == "No SuperTokens core available to query" or message.startswith(
-        "SuperTokens core threw an error for a "
-    )
+    return con.execute(
+        "SELECT * FROM sessions WHERE session_id=? AND expires_at IS NOT NULL AND expires_at > ?",
+        (sid, now()),
+    ).fetchone()
 
 
 def cart_count(con, cid):
@@ -559,6 +473,12 @@ def base_ctx(con, s, request, prods=None, cats=None, title="Pantree", heading=No
     customer = con.execute(
         "SELECT first_name FROM customer_pii WHERE customer_id=?", (s["customer_id"],)
     ).fetchone()
+    ensure_auth_tables(con)
+    identity = con.execute(
+        "SELECT picture_url FROM auth_identities WHERE customer_id=? AND picture_url IS NOT NULL "
+        "ORDER BY last_login_at DESC LIMIT 1",
+        (s["customer_id"],),
+    ).fetchone()
     cart_quantities = {
         row["product_id"]: row["quantity"]
         for row in con.execute(
@@ -578,5 +498,6 @@ def base_ctx(con, s, request, prods=None, cats=None, title="Pantree", heading=No
             if customer and customer["first_name"]
             else "Customer"
         ),
+        "picture_url": identity["picture_url"] if identity else None,
         "cart_quantities": cart_quantities,
     }
