@@ -196,6 +196,37 @@ case-insensitive as in SQLite, and pools connections (Neon's pooler does not sup
 statements, so they are turned off). The Neon free plan has 1 GB of storage; a demo site uses a
 small fraction of it.
 
+### Automatic deploys from GitHub
+
+`.github/workflows/deploy.yml` deploys `main` to Cloud Run whenever the CI workflow passes on
+it, and can also be started by hand (**Actions → Deploy to Cloud Run → Run workflow**). It signs
+in to Google with Workload Identity Federation: GitHub issues a short-lived token for this
+repository's `main` branch and Google exchanges it for the deploy service account, so no Google key
+is stored in GitHub. Until the variables below exist the workflow is skipped, never failed.
+
+One-time setup, after `scripts/deploy_cloudrun.sh` has run once:
+
+1. In Cloud Shell, from the repository folder:
+
+   ```bash
+   bash scripts/setup_github_deploy.sh
+   ```
+
+   It creates the `github-deployer` service account (Cloud Run admin, Cloud Build, Artifact
+   Registry and storage for the build, read-only project access, and permission to act only as
+   the app's and Cloud Build's own service accounts) and a workload identity pool whose provider
+   accepts tokens only from this repository's `main` branch.
+2. In GitHub → the repository → **Settings → Secrets and variables → Actions → Variables**, add
+   the four repository variables it prints: `GCP_PROJECT_ID`, `GCP_PROJECT_NUMBER`,
+   `GCP_WORKLOAD_IDENTITY_PROVIDER` and `GCP_DEPLOY_SERVICE_ACCOUNT` (optionally `GCP_REGION`
+   if you deploy outside `asia-southeast1`).
+3. Start the first run from **Actions → Deploy to Cloud Run → Run workflow**. Each run shows up
+   under the repository's **Deployments → production** with a link to the live site.
+
+The workflow runs `scripts/deploy_cloudrun.sh` with `DEPLOY_ONLY=1`, which skips the one-time
+setup (APIs, the app's service account and its secret access, the image repository); run the script
+by hand without it when that setup changes.
+
 ### Reset my recommendations
 
 The account page has a **Reset recommendations** button. It deletes the customer's

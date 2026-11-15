@@ -1,0 +1,50 @@
+name: Deploy to Cloud Run
+
+# Deploys main to Google Cloud Run after the CI workflow passes on it, or when started by hand
+# (Actions -> Deploy to Cloud Run -> Run workflow). Authenticates with Workload Identity
+# Federation, so no Google key is stored in GitHub; one-time setup:
+# scripts/setup_github_deploy.sh and the repository variables it prints.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write   # lets the job request a GitHub OIDC token for Google
+
+concurrency:
+  group: deploy-cloud-run
+  cancel-in-progress: false   # never stop a deploy half-way; queue the next one
+
+jobs:
+  deploy:
+    if: >-
+      vars.GCP_PROJECT_ID != '' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment:
+      name: production
+      url: https://pantree-storefront-${{ vars.GCP_PROJECT_NUMBER || 'PROJECT_NUMBER' }}.${{ vars.GCP_REGION || 'asia-southeast1' }}.run.app/login
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Build, seed and deploy
+        env:
+          PROJECT: ${{ vars.GCP_PROJECT_ID }}
+          REGION: ${{ vars.GCP_REGION || 'asia-southeast1' }}
+          DEPLOY_ONLY: "1"
+        run: bash scripts/deploy_cloudrun.sh

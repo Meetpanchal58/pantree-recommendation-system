@@ -11,6 +11,8 @@
 #   session-secret        signs the OAuth state cookie                    created here if missing
 #
 # Optional overrides: PROJECT, REGION, SERVICE, REPO, PUBLIC_APP_URL (custom domain), SKIP_SEED=1.
+# DEPLOY_ONLY=1 skips the one-time setup (APIs, service account, secret access, image repository);
+# GitHub Actions uses it (.github/workflows/deploy.yml) after scripts/setup_github_deploy.sh has run.
 set -euo pipefail
 
 PROJECT="${PROJECT:-$(gcloud config get-value project 2>/dev/null)}"
@@ -25,31 +27,38 @@ TAG="$(git rev-parse --short HEAD 2>/dev/null || date +%s)"
 IMAGE="${REGION}-docker.pkg.dev/${PROJECT}/${REPO}/storefront:${TAG}"
 gcloud config set project "$PROJECT" >/dev/null
 
-echo "Enabling the required Google Cloud APIs ..."
-gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com \
-  secretmanager.googleapis.com >/dev/null
+DEPLOY_ONLY="${DEPLOY_ONLY:-0}"
+if [ "$DEPLOY_ONLY" != "1" ]; then
+  echo "Enabling the required Google Cloud APIs ..."
+  gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com \
+    secretmanager.googleapis.com >/dev/null
+fi
 
 has_secret() { gcloud secrets describe "$1" >/dev/null 2>&1; }
 for s in database-url google-client-id google-client-secret; do
   has_secret "$s" || { echo "Missing secret '$s'. Create it first, e.g.:"; \
     echo "  printf '%s' 'VALUE' | gcloud secrets create $s --data-file=-"; exit 1; }
 done
-if ! has_secret session-secret; then
+if [ "$DEPLOY_ONLY" = "1" ]; then
+  has_secret session-secret || { echo "Missing secret 'session-secret'. Run the script once without DEPLOY_ONLY."; exit 1; }
+elif ! has_secret session-secret; then
   echo "Creating secret 'session-secret' ..."
   head -c 48 /dev/urandom | base64 | tr -d '\n=/+' | gcloud secrets create session-secret --data-file=- >/dev/null
 fi
 
-# Service account the app runs as: may read its four secrets, nothing else.
-gcloud iam service-accounts describe "$SA" >/dev/null 2>&1 || \
-  gcloud iam service-accounts create "$SA_NAME" --display-name "Pantree storefront (Cloud Run)"
-for s in database-url google-client-id google-client-secret session-secret; do
-  gcloud secrets add-iam-policy-binding "$s" --member "serviceAccount:$SA" \
-    --role roles/secretmanager.secretAccessor >/dev/null
-done
+if [ "$DEPLOY_ONLY" != "1" ]; then
+  # Service account the app runs as: may read its four secrets, nothing else.
+  gcloud iam service-accounts describe "$SA" >/dev/null 2>&1 || \
+    gcloud iam service-accounts create "$SA_NAME" --display-name "Pantree storefront (Cloud Run)"
+  for s in database-url google-client-id google-client-secret session-secret; do
+    gcloud secrets add-iam-policy-binding "$s" --member "serviceAccount:$SA" \
+      --role roles/secretmanager.secretAccessor >/dev/null
+  done
 
-gcloud artifacts repositories describe "$REPO" --location "$REGION" >/dev/null 2>&1 || \
-  gcloud artifacts repositories create "$REPO" --repository-format docker --location "$REGION" \
-    --description "Pantree container images" >/dev/null
+  gcloud artifacts repositories describe "$REPO" --location "$REGION" >/dev/null 2>&1 || \
+    gcloud artifacts repositories create "$REPO" --repository-format docker --location "$REGION" \
+      --description "Pantree container images" >/dev/null
+fi
 
 if gcloud artifacts docker images describe "$IMAGE" >/dev/null 2>&1; then
   echo "Image $IMAGE already built; skipping the build."
