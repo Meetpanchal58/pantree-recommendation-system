@@ -22,8 +22,9 @@ RUN apt-get update \
 
 WORKDIR /app
 
-COPY requirements-deploy.txt ./
-RUN pip install -r requirements-deploy.txt
+COPY requirements.txt ./
+# CPU-only PyTorch: the image never uses a GPU, and the CUDA build is several GB larger.
+RUN pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
 
 COPY prepare_data.py ./
 COPY recommendations ./recommendations

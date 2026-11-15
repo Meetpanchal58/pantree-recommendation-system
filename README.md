@@ -92,7 +92,7 @@ Details: [docs/recommender.md](docs/recommender.md#evaluation).
 ## Analytics and churn
 
 `analysis/insights.ipynb` explores the shop's data (re-run it with
-`jupyter execute --inplace analysis/insights.ipynb` after `pip install -r requirements-analysis.txt`). Findings on the full shop:
+`jupyter execute --inplace analysis/insights.ipynb` after `pip install -r requirements.txt`). Findings on the full shop:
 
 <!-- INSIGHTS:START -->
 *Generated from `recommendations/reports/insights_summary.json`, written when `analysis/insights.ipynb` runs.*

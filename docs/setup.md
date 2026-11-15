@@ -176,7 +176,7 @@ The script:
 1. enables Cloud Run, Cloud Build, Artifact Registry and Secret Manager;
 2. creates a service account that can read only the four secrets, and an Artifact Registry
    repository;
-3. builds the image with Cloud Build (`Dockerfile`: installs `requirements-deploy.txt`, downloads
+3. builds the image with Cloud Build (`Dockerfile`: installs `requirements.txt` with CPU-only PyTorch, downloads
    the small shop with six months of browsing, and drops the raw source tables);
 4. runs `webapp/seed_db.py` once as a Cloud Run **job** against the database: it fills an empty
    database and, on later deploys of the same shop, keeps all live activity and only adds new
