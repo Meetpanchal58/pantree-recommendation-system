@@ -11,8 +11,8 @@
 #   session-secret        signs the OAuth state cookie                    created here if missing
 #
 # Optional overrides: PROJECT, REGION, SERVICE, REPO, PUBLIC_APP_URL (custom domain), SKIP_SEED=1.
-# DEPLOY_ONLY=1 skips the one-time setup (APIs, service account, secret access, image repository);
-# GitHub Actions uses it (.github/workflows/deploy.yml) after scripts/setup_github_deploy.sh has run.
+# DEPLOY_ONLY=1 skips the one-time setup (APIs, service account, secret access, image repository).
+# Day-to-day deploys from main run through cloudbuild.yaml (a Cloud Build trigger); see docs/setup.md.
 set -euo pipefail
 
 PROJECT="${PROJECT:-$(gcloud config get-value project 2>/dev/null)}"

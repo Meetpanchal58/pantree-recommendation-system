@@ -168,7 +168,7 @@ the Neon Postgres live database, and "Reset my recommendations": [docs/setup.md]
 | `recommendations/oracle.py` | Evaluation-only oracle and retrieval ceiling |
 | `recommendations/reports/` | Generated reports and the chosen settings |
 | `webapp/` | FastAPI storefront, Google sign-in, customer profile, live database (Postgres / SQLite), recommendation logging, account reset |
-| `Dockerfile`, `scripts/`, `.github/workflows/` | Container image, Cloud Run deploy script, CI tests and automatic deploys from `main` |
+| `Dockerfile`, `cloudbuild.yaml`, `scripts/` | Container image, automatic Cloud Build deploys from `main`, and the Cloud Run deploy script |
 | `analysis/` | Insights notebook and churn analysis |
 | `docs/` | [Setup](docs/setup.md) (run, Google sign-in, Cloud Run hosting), [recommender](docs/recommender.md) (method + evaluation), [data](docs/data.md) |
 | `tests/` | Unit, parity, leakage and guard tests |
