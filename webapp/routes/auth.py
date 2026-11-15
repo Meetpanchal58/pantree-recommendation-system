@@ -6,6 +6,7 @@ from fastapi import APIRouter
 
 from .. import auth, profile
 from ..core import (
+    _catalog_cached,
     Cookie,
     HTMLResponse,
     RedirectResponse,
@@ -47,6 +48,7 @@ def login_page(request: Request, error: str = "", msg: str = "", sid: str = Cook
     try:
         if get_session(con, sid):
             return RedirectResponse("/", status_code=303)
+        showcase = _showcase_products(con)
     finally:
         con.close()
     return tpl.TemplateResponse(
@@ -56,10 +58,35 @@ def login_page(request: Request, error: str = "", msg: str = "", sid: str = Cook
             "title": "Sign in",
             "error": LOGIN_ERRORS.get(error, ""),
             "msg": msg,
+            "showcase": showcase,
             "google_enabled": auth.google_configured(),
             "dev_login": auth.dev_login_enabled(),
         },
     )
+
+
+def _showcase_products(con, per_department=2):
+    """A few well-reviewed products with photos for the sign-in page (cached on Postgres)."""
+    def compute():
+        rows = con.execute(
+            """SELECT p.product_name, p.brand_name, p.image_url, p.h1_category
+               FROM products p JOIN inventory i USING(product_id)
+               WHERE p.image_url IS NOT NULL AND p.image_url <> '' AND i.current_stock > 0
+               ORDER BY p.review_count DESC, p.avg_rating DESC, p.product_id LIMIT 60"""
+        ).fetchall()
+        picked, per = [], {}
+        for row in rows:
+            department = row["h1_category"]
+            if per.get(department, 0) < per_department:
+                per[department] = per.get(department, 0) + 1
+                picked.append(dict(row))
+        return picked[:6]
+
+    try:
+        return _catalog_cached(con, "login_showcase", compute)
+    except Exception:  # e.g. a fresh, unseeded database
+        logger.warning("Sign-in showcase unavailable", exc_info=True)
+        return []
 
 
 # ----------------------------------------------------------------------------- identity -> customer
