@@ -12,8 +12,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 WEBAPP = ROOT / "webapp"
@@ -80,33 +79,27 @@ class JourneyMixin:
         core.reset_customer_activity(con, self.customer_id, keep_session_id=None, now=core.now(), new_id=core.uid)
         con.execute("UPDATE customers SET recommendations_reset_at=NULL WHERE customer_id=?", (self.customer_id,))
         con.execute("DELETE FROM sessions WHERE session_id IN ('journey-sid', 'other-sid')")
-        con.execute("DELETE FROM supertokens_customers WHERE supertokens_user_id='st-journey'")
+        con.execute("DELETE FROM auth_identities WHERE provider='google' AND subject='g-journey'")
         con.execute(
             "INSERT INTO customer_pii (customer_id, first_name, email) VALUES (?, 'Journey', ?) ON CONFLICT DO NOTHING",
             (self.customer_id, f"{self.customer_id.lower()}@example.com"),
         )
         con.execute(
-            "INSERT INTO supertokens_customers (supertokens_user_id, customer_id, created_at) VALUES (?, ?, ?)",
-            ("st-journey", self.customer_id, core.now()),
+            "INSERT INTO auth_identities (provider, subject, customer_id, created_at) VALUES ('google', 'g-journey', ?, ?)",
+            (self.customer_id, core.now()),
         )
         for sid in ("journey-sid", "other-sid"):
             con.execute(
-                """INSERT INTO sessions (session_id, customer_id, device_type, created_at, supertokens_session_handle)
-                   VALUES (?, ?, 'Desktop Web', ?, 'st-handle')""",
+                """INSERT INTO sessions (session_id, customer_id, device_type, created_at, expires_at)
+                   VALUES (?, ?, 'Desktop Web', ?, '2999-01-01T00:00:00')""",
                 (sid, self.customer_id, core.now()),
             )
         con.commit()
         con.close()
-        auth = SimpleNamespace(get_handle=lambda: "st-handle", get_user_id=lambda: "st-journey")
-        self.session_patch = patch.object(storefront.session_async, "get_session", new=AsyncMock(return_value=auth))
-        self.session_patch.start()
         storefront.app.state.homepage_feed_responses = 0  # normally set at app start-up
         storefront.app.state.homepage_feeds_ready = asyncio.Event()
         self.client = TestClient(storefront.app)
         self.client.cookies.set("sid", "journey-sid")
-
-    def tearDown(self):
-        self.session_patch.stop()
 
     def count(self, sql, *params):
         con = core.db()
@@ -155,7 +148,7 @@ class JourneyMixin:
         # account, sign-in link and the current login are kept; other sessions are ended
         self.assertEqual(self.count("SELECT COUNT(*) FROM customers WHERE customer_id=?", cid), 1)
         self.assertEqual(self.count("SELECT COUNT(*) FROM customer_pii WHERE customer_id=?", cid), 1)
-        self.assertEqual(self.count("SELECT COUNT(*) FROM supertokens_customers WHERE customer_id=?", cid), 1)
+        self.assertEqual(self.count("SELECT COUNT(*) FROM auth_identities WHERE customer_id=?", cid), 1)
         self.assertEqual(self.count("SELECT COUNT(*) FROM sessions WHERE session_id='journey-sid'"), 1)
         self.assertEqual(self.count("SELECT COUNT(*) FROM sessions WHERE session_id='other-sid'"), 0)
         self.assertIsNotNone(self.count("SELECT recommendations_reset_at FROM customers WHERE customer_id=?", cid))

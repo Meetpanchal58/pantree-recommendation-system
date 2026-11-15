@@ -1,6 +1,6 @@
 # Setup
 
-Install, get the data, set up sign-in, start the shop and host it (Render + Neon).
+Install, get the data, set up Google sign-in, start the shop and host it (Google Cloud Run + Neon).
 
 ## How to run
 
@@ -8,9 +8,9 @@ Install, get the data, set up sign-in, start the shop and host it (Render + Neon
 
 - Windows, macOS, or Linux; the commands below are for Windows PowerShell.
 - Python 3.11 or newer and an internet connection to install Python packages.
-- Docker Desktop running, to start the sign-in service.
-- To receive a real sign-in code: an email sending account (SMTP), or an Android phone running
-  OpenSMS on the same trusted network. You can set up one or both.
+- For Google sign-in: a Google Cloud project with an OAuth client (see
+  [Google sign-in](#google-sign-in)). Without one, local development offers a developer-only
+  sign-in form instead.
 
 ### 1. Install Pantree
 
@@ -50,237 +50,166 @@ the SQLite file `webapp\pantree_app.db`, which **seeding replaces**. With `DATAB
 Postgres database (as on the hosted site), it seeds only an empty database and keeps existing
 activity; `--reset` starts over.
 
-### 4. Set up email or phone-code sign-in
+### 4. Settings
 
-Copy the example settings file and open it:
+Copy the example settings file:
 
 ```powershell
 Copy-Item .env.example .env
 notepad .env
 ```
 
-In `.env`, provide values for the SuperTokens Core and its database:
-
-- `SUPERTOKENS_DB_USER` and `SUPERTOKENS_DB_NAME` already have example values.
-- Set a private, strong value for `SUPERTOKENS_DB_PASSWORD`.
-- Set a private API key for `SUPERTOKENS_API_KEY`.
-
-Use a different random value for each password/key. You can make one with:
-
-```powershell
-py -c "import secrets; print(secrets.token_hex(32))"
-```
-
-Copy the result into the matching field in `.env`; do not post it in chat or commit it to GitHub.
-
-For a local test, configure at least one way to receive codes:
-
-- **Email:** fill in `SMTP_HOST`, `SMTP_FROM_EMAIL`, `SMTP_USERNAME`, and `SMTP_PASSWORD`.
-  Gmail needs an App Password; Resend is another supported SMTP option. Keep credentials private.
-- **SMS:** set `OPENSMS_API_URL` to your Android phone's trusted LAN address ending in `/sms/`,
-  and set `OPENSMS_API_KEY` to the key from OpenSMS. Do not expose the phone's endpoint to the
-  public internet.
-
-On Render you can use email OTP alone: configure all four SMTP values above, and the sign-in page will offer email
-only when OpenSMS is not configured. A phone's local Wi-Fi address is not reachable from Render;
-do not expose the OpenSMS API or its key publicly. For production, also set
-`PANTREE_RATE_LIMIT_SECRET` to a private random value of at least 32 characters. Do not put real
-passwords or keys in GitHub. On a 512 MB instance such as Render's free tier, set
-`PANTREE_HEAVY_RECOMMENDATIONS=0` so the app skips the collaborative-filtering and
-sentence-transformer models, which otherwise exceed the memory limit; recommendations fall back to
-lighter sources. `render.yaml` installs `requirements-render.txt`, which leaves out those
-models' packages (including PyTorch) for faster builds.
-See the detailed
-[email and phone sign-in details](#passwordless-authentication) if you need provider-specific help.
-
-Make sure Docker Desktop is running. Start the sign-in service from the project folder:
-
-```powershell
-docker compose --env-file .env -f docker-compose.auth.yml up -d
-```
-
-Wait until the SuperTokens and PostgreSQL services are healthy. They store and verify codes and
-sessions; the shop itself stores profiles and shopping activity in its own live database. After a
-successful code check, Pantree remembers the sign-in in your browser. A shopper can only use
-their own cart and orders; there are no separate administrator accounts in this demo.
-
-To check that the services have started, run:
-
-```powershell
-docker compose --env-file .env -f docker-compose.auth.yml ps
-```
+For a first local run you can leave everything as it is: with `APP_ENV=development` and no Google
+client, the sign-in page shows a **Developer sign-in** form (name + email) that creates or opens
+an account without Google. It is never shown when `APP_ENV=production` or when a Google client
+is configured. To test the real Google button locally, follow [Google sign-in](#google-sign-in)
+and add `http://127.0.0.1:8000/auth/google/callback` as a redirect URI.
 
 ### 5. Start the shop
 
-From the project folder, run:
-
 ```powershell
 .\.venv\Scripts\python.exe -m uvicorn webapp.app:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Open `http://127.0.0.1:8000/login`. You can also launch from inside the `webapp` folder. In
-`app:app`, the first `app` means “the file `app.py` here” and the second means “the FastAPI
-application inside it”:
-
-```powershell
-Set-Location webapp
-..\.venv\Scripts\python.exe -m uvicorn app:app --reload
-```
-
-Or activate `.venv` first and run `python -m uvicorn app:app --reload`.
+Open `http://127.0.0.1:8000/login`. If you use another port, set `PUBLIC_APP_URL` to that origin
+(for example `http://127.0.0.1:8013`). On a small machine set `PANTREE_HEAVY_RECOMMENDATIONS=0`
+to skip the collaborative-filtering and sentence-transformer models.
 
 ### 6. Try the shop
 
-1. New shoppers open **Create account**, fill in their details (name, email, optional mobile, city,
-   optional gender, age range and "how did you hear about us", marketing choices, and terms) and
-   verify the code sent to their email. The account is created only after the code is verified.
-   Signing up again with the same email or mobile shows "An account with this email already exists".
-2. Returning shoppers use **Sign in** with their email or mobile and the code they receive. Sign-in
-   never creates an account; an unknown email shows "No account found. Create an account first".
+1. Click **Continue with Google**. If your Google email already belongs to a Pantree customer,
+   you are signed in to that account; otherwise a new account is created from your Google name
+   and email and you land on **Your account** to add the rest of your details.
+2. In **Your account → Personal details**, add your mobile number, city, home address, gender,
+   age range, how you heard about Pantree and your marketing choices, then **Save profile**.
+   The changes are written straight to the live `customers` and `customer_pii` tables, and the
+   address prefills checkout.
 3. Browse departments, search, open a product, add products to your cart or wishlist, and try a
    checkout.
-4. Visit **Your Orders** to mark the demo order delivered or cancel it. After marking it
+4. Visit **Your orders** to mark the demo order delivered or cancel it. After marking it
    delivered, you can also try a return or replacement.
-5. Use **Sign out** when you are finished.
+5. Use **Sign out** from the account menu when you are finished.
 
 Checkout is a demonstration: it does not charge a real card. It creates a paid demo order in
-**Placed** status. In **Your Orders**, mark it delivered to try a return or replacement, or cancel
-it to see the payment marked refunded and the items returned to stock.
-
-## Short launch command (after setup)
-
-If you have already generated the data, seeded the shop database, configured sign-in, and started
-Docker, launch the shop from the project folder with:
-
-```powershell
-.\.venv\Scripts\python.exe -m uvicorn webapp.app:app --reload --host 127.0.0.1 --port 8000
-```
-
-Open `http://127.0.0.1:8000/login`. For the complete first-time steps, use
-[Start here: setup and use Pantree](#how-to-run) above.
+**Placed** status. In **Your orders**, mark it delivered to try a return or replacement, or cancel
+it to see the payment marked refunded and the items returned to stock. Sold-out items can be
+restocked from **Your account → Demo tools**.
 
 ### Getting newer data
 
 `python prepare_data.py` always downloads the latest published days. It refreshes the files the
 recommender and the notebook read; it does not touch the live shop database.
 
-## Passwordless authentication
+## Google sign-in
 
-The storefront uses the SuperTokens Passwordless recipe and Session recipe for email-or-phone
-OTP sign-up, login, refresh, and logout. Sign-up and sign-in are separate flows: sign-up
-(`POST /signup/otp/request`) collects profile details, rejects an email or mobile that already
-has an account, and creates the customer only after the code is verified; sign-in
-(`POST /login/otp/request`) sends a code only to existing accounts and never creates one.
-Pantree's own live database (profiles, carts, orders, activity) is Postgres when
-`DATABASE_URL` is set and SQLite otherwise (see "Live database" below), while SuperTokens Core
-stores authentication/session data in its own PostgreSQL.
+The storefront signs shoppers in with Google (OAuth 2.0 / OpenID Connect, via
+[Authlib](https://docs.authlib.org/)); there are no passwords or one-time codes.
 
-### Sign-in and access control
+### How it works
 
-Email and phone number are alternative identifiers for the same passwordless flow. The login
-page normalizes the identifier, asks SuperTokens Core to create a one-time code, and sends that
-code through the configured provider (SMTP for email or OpenSMS for SMS). SuperTokens verifies
-the code; OpenSMS is a delivery provider only and does not create or validate authentication
-codes. The supplied Compose configurations set a five-minute lifetime and allow five verification
-attempts per code. Resend requests create a new code and are throttled along with initial
-requests.
+- `GET /auth/google/login` sends the browser to Google's consent screen (scopes
+  `openid email profile`). The OAuth `state` is kept in a signed, 10-minute cookie
+  (`pantree_oauth`, signed with `SESSION_SECRET`).
+- `GET /auth/google/callback` exchanges the code, checks the ID token and requires a **verified**
+  email. Then:
+  - the Google account is already linked in `auth_identities` → that customer;
+  - otherwise a customer whose `customer_pii.email` matches is linked (existing shoppers keep
+    their history);
+  - otherwise a new customer is created (`customers` + `customer_pii`) and sent to the profile
+    page with a welcome message.
+- Pantree then creates its own session: a random 256-bit ID in an HttpOnly, SameSite=Lax cookie
+  (`sid`, Secure on HTTPS) and a row in `sessions` that expires after 7 days. Sign-out deletes
+  the row. Every protected page and API checks the session; data operations use that session's
+  customer ID, never one supplied by the browser.
+- Unsafe requests (POST, ...) with an `Origin`/`Referer` must match `PUBLIC_APP_URL`; production
+  also rejects unsafe requests without one.
+- Customers whose `account_status` is not `active` cannot sign in.
 
-After successful verification, Pantree either creates the new customer from the saved sign-up
-details or, for sign-in, links the verified SuperTokens identity to the existing customer with
-that verified email or phone (a code verified for an unknown contact creates nothing). The
-app then creates a SuperTokens session and a local session-to-customer mapping. The browser
-receives an HttpOnly `sid` cookie; it is Secure for HTTPS, uses SameSite=Lax, and has a seven-day
-maximum age. Invalid or expired sessions are rejected, and an expired access session is refreshed
-through SuperTokens when possible. Logout revokes the SuperTokens session and clears the local
-cookie.
+### Create the OAuth client
 
-Protected storefront actions are available to a signed-in, mapped customer; data operations use
-that customer's ID rather than an ID supplied by the browser. The recommendation API requires
-this session. This is customer authentication and session authorization, not a role/permission
-system: the app does not define separate shopper/admin roles. OTP send requests have a 30-second
-cooldown; initial sends are limited to five per identifier and 20 per client IP in a 15-minute
-window. Resends use the device ID as the per-identifier bucket and are also subject to the IP
-limit. Unsafe requests with an Origin or Referer are checked against the configured app origin;
-production also rejects unsafe requests without one. SuperTokens' own passwordless HTTP endpoints
-for creating, resending, or consuming codes are disabled in favor of Pantree's throttled routes.
+1. In [Google Cloud console](https://console.cloud.google.com/) pick your project, then
+   **APIs & Services → OAuth consent screen**: user type **External**, app name "Pantree",
+   your support email, scopes `openid`, `email`, `profile`. While the app is in *Testing*, add the
+   Google accounts that may sign in as test users, or **Publish** the app so anyone can.
+2. **APIs & Services → Credentials → Create credentials → OAuth client ID → Web application**.
+3. Authorised JavaScript origins: your site's origin (for example
+   `https://pantree-storefront-123456789.asia-southeast1.run.app`, and `http://127.0.0.1:8000`
+   for local testing).
+4. Authorised redirect URIs: `<origin>/auth/google/callback` for each origin above.
+5. Copy the client ID and secret into `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` (in `.env`
+   locally; in Secret Manager for Cloud Run, below). Never commit them.
 
-### Local setup
+## Hosting: Google Cloud Run + Neon Postgres
 
-1. Copy `.env.example` to `.env` and edit it locally; `.env` is ignored by Git:
+The storefront runs as a container on Cloud Run (scales to zero, so it fits the free tier). The
+shop's data is baked into the image at build time; everything people do on the site (accounts,
+profiles, carts, orders, clicks, impressions) is stored in a Postgres database such as Neon, so it
+survives restarts and redeploys.
 
-   ```powershell
-   Copy-Item .env.example .env
-   notepad .env
+### One-time setup
+
+1. **Database.** Create a free project at neon.tech (pick a region near your Cloud Run region,
+   e.g. Singapore for `asia-southeast1`), click **Connect**, keep **Connection pooling** on and
+   copy the connection string.
+2. **OAuth client.** Create it as in [Create the OAuth client](#create-the-oauth-client). You can
+   add the Cloud Run origin after the first deploy; the script prints it.
+3. **Secrets.** Open Cloud Shell in your project and store the three values in Secret Manager:
+
+   ```bash
+   printf '%s' 'postgresql://...'        | gcloud secrets create database-url --data-file=-
+   printf '%s' 'xxxx.apps.googleusercontent.com' | gcloud secrets create google-client-id --data-file=-
+   printf '%s' 'GOCSPX-...'              | gcloud secrets create google-client-secret --data-file=-
    ```
 
-2. Set `PUBLIC_APP_URL` to the exact browser origin. For Gmail SMTP, set
-   `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`, and your full Gmail address in both
-   `SMTP_FROM_EMAIL` and `SMTP_USERNAME`. Put the Google App Password in
-   `SMTP_PASSWORD` (not your regular Gmail password). Alternatively, use Resend SMTP
-   (host `smtp.resend.com`, port `465`, username `resend`, and the Resend API key as
-   `SMTP_PASSWORD`). SMTP port `465` (or Resend's `2465`, for hosts such as Render's free tier that block 465) is enforced so OTP mail uses implicit TLS. With Resend, verify
-   the sending domain and its DNS
-   records in Resend, and use an authorized `SMTP_FROM_EMAIL`. Gmail requires 2-Step
-   Verification; do not use your normal account password.
-3. Configure OpenSMS on an Android phone connected to the same trusted LAN. Set
-   `OPENSMS_API_URL` to the phone's LAN address ending in `/sms/`, and set the generated API key
-   in `OPENSMS_API_KEY`. Do not expose the phone API publicly or forward its port through your
-   router. Pantree uses a five-second request timeout. SuperTokens generates and verifies the OTP;
-   OpenSMS only sends it. Mobile numbers may include `+` and an international calling code;
-   unprefixed 10-digit numbers are interpreted as India.
-4. Set `SUPERTOKENS_API_KEY`, `SUPERTOKENS_DB_PASSWORD`, and
-   `PANTREE_RATE_LIMIT_SECRET` privately. Use at least 32 random characters for the rate-limit
-   secret (for example, generate 64 hexadecimal characters with
-   `python -c "import secrets; print(secrets.token_hex(32))"`). Keep secrets in `.env` locally
-   and a secret manager in production. Never commit or share them.
-5. Start the pinned SuperTokens Core and its persistent PostgreSQL database:
+   `session-secret` is generated by the deploy script if it does not exist.
 
-   ```powershell
-   docker compose --env-file .env -f docker-compose.auth.yml up -d
-   ```
+### Deploy
 
-6. Set `SUPERTOKENS_CONNECTION_URI=http://127.0.0.1:3567` for an app running on the host,
-   then start Uvicorn from `webapp` as usual. If using a non-default port, set `PUBLIC_APP_URL`
-   to that origin (for example `http://127.0.0.1:8013`).
+From the repository folder in Cloud Shell:
 
-## Hosting: Render + Neon Postgres
+```bash
+bash scripts/deploy_cloudrun.sh
+```
 
-On Render's free plan the disk is wiped on every redeploy, restart and sleep, so a SQLite file
-loses all activity. Set `DATABASE_URL` to a hosted Postgres database and everything people do
-on the site (accounts, carts, orders, clicks, impressions) persists.
+The script:
 
-1. Create a free project at neon.tech (region close to the Render service, e.g. Singapore),
-   click **Connect**, keep **Connection pooling** on and copy the connection string.
-2. In Render → the web service → **Environment**, add `DATABASE_URL` with that string.
-3. Deploy. The build downloads the small shop (`python prepare_data.py --size small --recent-months 6`,
-   which keeps six months of browsing for serving so the app fits the free plan's 512 MB) and runs
-   `python webapp/seed_db.py`. Seeding fills an empty database; on later deploys of the same shop it
-   keeps all live activity and only adds products, customers and stock rows that are new in the
-   nightly-refreshed data. If the downloaded shop is a different one (another size or seed), it
-   starts over, since old orders point at the old products. `python webapp/seed_db.py --reset`
-   deletes everything and seeds again. Seeded tables use about 5 MB of Neon's 1 GB.
+1. enables Cloud Run, Cloud Build, Artifact Registry and Secret Manager;
+2. creates a service account that can read only the four secrets, and an Artifact Registry
+   repository;
+3. builds the image with Cloud Build (`Dockerfile`: installs `requirements-deploy.txt`, downloads
+   the small shop with six months of browsing, and drops the raw source tables);
+4. runs `webapp/seed_db.py` once as a Cloud Run **job** against the database: it fills an empty
+   database and, on later deploys of the same shop, keeps all live activity and only adds new
+   products, customers and stock (`SKIP_SEED=1` skips it);
+5. deploys the service (`min-instances 0`, `max-instances 2`, 1 vCPU, 1 GiB,
+   `APP_ENV=production`, `PANTREE_HEAVY_RECOMMENDATIONS=0`, `PANTREE_LIVE_MIRROR=0`) with
+   `PUBLIC_APP_URL` set to the service's `https://SERVICE-PROJECTNUMBER.REGION.run.app` address;
+6. prints the URL and the redirect URI to add to the OAuth client.
 
-Without `DATABASE_URL` the app keeps using SQLite (local development and most tests).
+Overrides: `PROJECT`, `REGION` (default `asia-southeast1`), `SERVICE` (default
+`pantree-storefront`), `REPO`, and `PUBLIC_APP_URL` for a custom domain. Re-run the script to
+deploy a new version; a rebuilt image also picks up the latest nightly data.
+
+Without `DATABASE_URL` the app uses SQLite (local development and most tests).
 `webapp/database.py` lets the same SQL run on both: it converts `?` placeholders, makes LIKE
 case-insensitive as in SQLite, and pools connections (Neon's pooler does not support prepared
-statements, so they are turned off). The Neon free plan has 1 GB of storage; a demo site uses
-a small fraction of it.
+statements, so they are turned off). The Neon free plan has 1 GB of storage; a demo site uses a
+small fraction of it.
 
 ### Reset my recommendations
 
-The account page has a **Reset my recommendations** button. It deletes the customer's
+The account page has a **Reset recommendations** button. It deletes the customer's
 clickstream, recommendation impressions and clicks, cart, wishlist, orders and returns, and
-their other login sessions; it keeps the account, the sign-in link and the current login.
-Units of open (not yet delivered) orders go back into stock with an `ACCOUNT_RESET` inventory
-movement. `customers.recommendations_reset_at` is set, so serving ignores anything stored about
-the customer before the reset and personalises again from new activity.
+their other login sessions; it keeps the account, the profile, the Google link and the current
+login. Units of open (not yet delivered) orders go back into stock with an `ACCOUNT_RESET`
+inventory movement. `customers.recommendations_reset_at` is set, so serving ignores anything stored
+about the customer before the reset and personalises again from new activity.
 
 ### Before opening the shop to the public
 
-Set a real `PUBLIC_APP_URL` (HTTPS), private keys (`SUPERTOKENS_API_KEY`, `PANTREE_RATE_LIMIT_SECRET`),
-working email (and optionally SMS) delivery and `DATABASE_URL`, then test a real sign-in and the main
-shopping actions on the public site. Neon can restore the database to an earlier point within its
-history window (see Neon's plan limits). Passing local tests does not by itself prove that public
-email/SMS delivery works.
+Publish the OAuth consent screen (or add test users), check that the redirect URI matches the
+deployed origin exactly, and test a real sign-in, a profile save and the main shopping actions on
+the public site. Neon can restore the database to an earlier point within its history window (see
+Neon's plan limits).
 
 Back to the [README](../README.md).

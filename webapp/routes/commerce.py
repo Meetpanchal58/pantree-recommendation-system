@@ -231,8 +231,11 @@ def checkout_page(request: Request, sid: str = Cookie(None), msg: str = ""):
         min(r["quantity"], max(r["current_stock"], 0)) * r["current_price"]
         for r in items
     )
+    # Home address from the profile: street/postcode/phone in customer_pii, city in customers.
     address = con.execute(
-        "SELECT * FROM customer_pii WHERE customer_id=?", (s["customer_id"],)
+        """SELECT p.*, c.signup_city, c.signup_state, c.signup_region
+           FROM customers c LEFT JOIN customer_pii p USING(customer_id) WHERE c.customer_id=?""",
+        (s["customer_id"],),
     ).fetchone()
     ctx = base_ctx(con, s, request, cats=_departments(con), title="Checkout")
     ctx.update({"items": items, "total": total, "msg": msg, "address": address})

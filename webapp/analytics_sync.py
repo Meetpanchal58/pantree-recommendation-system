@@ -9,7 +9,7 @@ BASE = Path(__file__).resolve().parent
 DUCKDB = BASE / "pantree_analytics.duckdb"
 
 # Live per-event mirroring to DuckDB is best-effort analytics only. On a shared/served
-# environment (e.g. Render) set PANTREE_LIVE_MIRROR=0 to disable it and avoid DuckDB
+# environment (e.g. Cloud Run) set PANTREE_LIVE_MIRROR=0 to disable it and avoid DuckDB
 # single-writer lock contention; rebuild the analytical mirror on demand via
 # sync_from_sqlite(). It must NEVER break a web request.
 MIRROR_ENABLED = os.getenv("PANTREE_LIVE_MIRROR", "1") == "1"

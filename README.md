@@ -11,9 +11,11 @@
 - **Bottleneck:** only 34.2% of orders have a bought product anywhere in the 50-product candidate list, so retrieval caps the score (the ranker cannot recover a product that was never retrieved). Next step: better candidate generation, e.g. a two-tower retriever trained on views, impressions and orders.
 <!-- TLDR:END -->
 
-### [Live demo](https://pantree-storefront.onrender.com/login)
+### Live demo
 
-Hosted on Render's free tier; the first request after inactivity may take 30-60 seconds.
+Hosted on Google Cloud Run (scales to zero, so the first request after a quiet spell takes a few
+seconds). Sign in with your Google account; a new account is created on first sign-in. Deploy your
+own copy with `scripts/deploy_cloudrun.sh` ([docs/setup.md](docs/setup.md#hosting-google-cloud-run--neon-postgres)).
 
 ## The problem
 
@@ -151,8 +153,8 @@ python webapp/seed_db.py                       # storefront database (SQLite, or
 python -m uvicorn webapp.app:app --host 127.0.0.1 --port 8000
 ```
 
-Sign-in setup (SuperTokens, email or phone codes), Windows commands, hosting on Render with the Neon
-Postgres live database, and "Reset my recommendations": [docs/setup.md](docs/setup.md).
+Google sign-in setup, the customer profile page, Windows commands, hosting on Google Cloud Run with
+the Neon Postgres live database, and "Reset my recommendations": [docs/setup.md](docs/setup.md).
 
 ## Repository map
 
@@ -165,9 +167,10 @@ Postgres live database, and "Reset my recommendations": [docs/setup.md](docs/set
 | `recommendations/evaluate.py`, `tune_als.py`, `tune_policy.py` | Offline evaluation and tuning |
 | `recommendations/oracle.py` | Evaluation-only oracle and retrieval ceiling |
 | `recommendations/reports/` | Generated reports and the chosen settings |
-| `webapp/` | FastAPI storefront, sign-in, live database (Postgres / SQLite), recommendation logging, account reset |
+| `webapp/` | FastAPI storefront, Google sign-in, customer profile, live database (Postgres / SQLite), recommendation logging, account reset |
+| `Dockerfile`, `scripts/deploy_cloudrun.sh` | Container image and one-command deploy to Google Cloud Run |
 | `analysis/` | Insights notebook and churn analysis |
-| `docs/` | [Setup](docs/setup.md) (run, sign-in, hosting), [recommender](docs/recommender.md) (method + evaluation), [data](docs/data.md) |
+| `docs/` | [Setup](docs/setup.md) (run, Google sign-in, Cloud Run hosting), [recommender](docs/recommender.md) (method + evaluation), [data](docs/data.md) |
 | `tests/` | Unit, parity, leakage and guard tests |
 
 ## License

@@ -1,9 +1,9 @@
 """Get the shop's history from the ecommerce-simulator package and shape it for Pantree.
 
     python prepare_data.py                  # download the full shop and convert it
-    python prepare_data.py --size small     # a smaller shop (laptops, CI, Render's free plan)
+    python prepare_data.py --size small     # a smaller shop (laptops, CI, the Cloud Run image)
     python prepare_data.py --skip-download  # convert data/source again without downloading
-    python prepare_data.py --size small --recent-months 6   # Render's free plan (512 MB of memory)
+    python prepare_data.py --size small --recent-months 6   # Cloud Run image: recent browsing only, less memory
 
 The data comes from https://github.com/Meetpanchal58/ecommerce-simulator, refreshed every
 night (GitHub release `data-latest`, mirrored on Hugging Face `Meet58/ecommerce-simulator`).

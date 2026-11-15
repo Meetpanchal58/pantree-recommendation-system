@@ -1,31 +1,8 @@
 {% extends "base.html" %}{% from "_card.html" import product_card with context %}
 {% block content %}
-<style>
-.home-recommendations{margin-top:22px}
-.home-recommendations .section-head{align-items:center;margin-bottom:12px}
-.recommendation-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
-.recommendation-card{padding:10px}
-.recommendation-card img{height:176px;object-fit:contain}
-.recommendation-card .brand{margin-top:8px}
-.recommendation-card .name{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;min-height:38px}
-.recommendation-card .wishlist-button{top:18px;right:18px;left:auto}
-.recommendation-card .rating{min-height:20px}
-.recommendation-card .recommendation-prices{margin-top:5px}
-.recommendation-card .recommendation-stock{margin-top:5px}
-.recommendation-card .recommendation-cart{margin-top:8px}
-.recommendation-card .card-quantity{margin-top:8px}
-.recommendation-price{font-size:14px;margin-top:8px}
-.recommendation-more{display:flex;justify-content:flex-end;margin-top:10px}
-.recommendation-more button{border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--forest);padding:9px 14px;font:inherit;font-weight:750;cursor:pointer}
-.recommendation-more button:hover{background:var(--mint)}
-.recommendation-message{grid-column:1/-1;color:var(--muted);padding:16px 0}
-@media(max-width:1050px){.recommendation-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
-@media(max-width:760px){.recommendation-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.recommendation-card img{height:145px}}
-@media(max-width:520px){.recommendation-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.recommendation-card img{height:155px}}
-</style>
 
 <section class="hero-band">
-	<div><div class="eyebrow">The new Pantree edit</div><h1>Everyday pieces, <em>well chosen.</em></h1><p>Explore real catalog products across apparel, footwear and accessories.</p><a class="hero-cta" href="/browse">Shop the full catalog <span>→</span></a></div>
+	<div><div class="eyebrow">Hello, {{ first_name }}</div><h1>Everyday pieces, <em>well chosen.</em></h1><p>Real catalogue products across apparel, footwear and accessories, with a home page that learns from what you browse and buy.</p><a class="hero-cta" href="/browse">Shop the full catalogue <span>→</span></a></div>
 	<div class="hero-art"><span>CURATED<br>FOR YOU</span></div>
 </section>
 
@@ -34,7 +11,7 @@
 		<div><div class="eyebrow" id="personalized-eyebrow">Picked from your activity</div><h2 class="section" id="personalized-heading">Recommended for you</h2></div>
 	</div>
 	<div id="personalized-recommendations" class="recommendation-grid" aria-live="polite">
-		<p class="recommendation-message">Finding products based on your browsing and purchases…</p>
+		<div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
 	</div>
 	<div class="recommendation-more" id="personalized-more" hidden>
 		<button type="button" aria-label="See more recommended products">More recommendations <span aria-hidden="true">→</span></button>
@@ -47,7 +24,7 @@
 		<a class="text-link" href="/browse?sort=rating">Shop all products →</a>
 	</div>
 	<div id="trending-recommendations" class="recommendation-grid" aria-live="polite">
-		<p class="recommendation-message">Loading trending products…</p>
+		<div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
 	</div>
 	<div class="recommendation-more" id="trending-more" hidden>
 		<button type="button" aria-label="See more trending products">More trending products <span aria-hidden="true">→</span></button>
@@ -117,14 +94,14 @@ function renderRecommendationCard(item) {
 		mrp.textContent = `₹${Number(item.mrp).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 		prices.append(mrp);
 		const discount = document.createElement("span");
-		discount.className = "stock-ok";
+		discount.className = "discount";
 		discount.textContent = ` ${Math.round((1 - Number(item.current_price) / Number(item.mrp)) * 100)}% off`;
 		prices.append(discount);
 	}
 
 	const stock = document.createElement("div");
 	stock.className = "stock-ok recommendation-stock";
-	stock.textContent = `In stock (${Number(item.current_stock).toLocaleString("en-IN")})`;
+	stock.textContent = Number(item.current_stock) <= 5 ? `Only ${Number(item.current_stock)} left` : "In stock";
 
 	card.append(wishlist, link, rating, prices, stock);
 	applyRecommendationCartState(card, Number(item.cart_quantity || 0));
@@ -167,7 +144,7 @@ function applyRecommendationCartState(card, quantity) {
 	const button = document.createElement("button");
 	button.type = "button";
 	button.className = "btn add-cart-button recommendation-cart";
-	button.textContent = "Add to Cart";
+	button.textContent = "Add to cart";
 	button.addEventListener("click", () => addToCart(productId));
 	card.append(button);
 }

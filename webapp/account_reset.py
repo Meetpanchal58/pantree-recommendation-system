@@ -1,6 +1,6 @@
 """Reset my recommendations: delete a customer's activity but keep their account.
 
-Kept:    the account (customers, customer_pii), the SuperTokens link and the current login.
+Kept:    the account (customers, customer_pii), the Google sign-in link and the current login.
 Deleted: clickstream, recommendation impressions and clicks, cart, wishlist, orders,
          order lines and returns, and other login sessions.
 Stock:   units of orders that were placed but not delivered, cancelled or returned go back

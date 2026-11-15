@@ -1,42 +1,151 @@
 {% extends "base.html" %}
+{% macro val(form_name, column=None) -%}
+  {%- if form is not none -%}{{ form.get(form_name, '') }}{%- else -%}{{ customer[column or form_name] or '' }}{%- endif -%}
+{%- endmacro %}
 {% block content %}
-<div class="crumb">Home / Your account</div>
-<h1 class="checkout-title">Your account</h1>
-{% if msg %}<p role="status" style="color:#176348;background:#eff8f2;border:1px solid #cce7d5;padding:11px;border-radius:8px">{{ msg }}</p>{% endif %}
+{% set selected_city = form.get('city', '') if form is not none else (customer.signup_city or '') %}
+{% set selected_gender = form.get('gender', '') if form is not none else (customer.gender or '') %}
+{% set selected_age = form.get('age_bracket', '') if form is not none else (customer.age_bracket or '') %}
+{% set selected_heard = form.get('heard_from', '') if form is not none else (customer.acquisition_channel or '') %}
+{% set email_opt = form.get('email_opt_in') if form is not none else customer.email_opt_in %}
+{% set sms_opt = form.get('sms_opt_in') if form is not none else customer.sms_opt_in %}
+{% set required_fields = [customer.first_name, customer.phone, customer.signup_city, customer.home_address_line1, customer.home_postal_code] %}
+{% set filled = required_fields|select|list|length %}
+<div class="crumb"><a href="/">Home</a> / Your account</div>
+<h1 class="page-title">Your account</h1>
+
+{% if welcome %}
+<div class="alert alert-ok" role="status"><b>Welcome to Pantree, {{ customer.first_name or 'there' }}!</b> Your account is ready. Add your details below so checkout is prefilled and recommendations fit where you live. You can also <a class="text-link" href="/">skip for now</a>.</div>
+{% elif not profile_complete and not errors %}
+<div class="alert alert-info">Complete your profile (phone, city and home address) for faster checkout.</div>
+{% endif %}
+{% if msg %}<div class="alert alert-ok" role="status">{{ msg }}</div>{% endif %}
+{% if errors %}<div class="alert alert-error" role="alert"><b>Please fix the following:</b><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>{% endif %}
+
 <div class="account-layout">
-  <section class="account-panel">
-    <div class="eyebrow">Personal details</div>
-    <h2>{{ customer.first_name or 'Customer' }} {{ customer.last_name or '' }}</h2>
-    <div class="detail-grid">
-      <div><small>Customer ID</small><b>{{ customer.customer_id }}</b></div>
-      <div><small>Account status</small><b>{{ customer.account_status }}</b></div>
-      <div><small>Email</small><b>{{ customer.email or 'Not provided' }}</b></div>
-      <div><small>Phone</small><b>{{ customer.phone or 'Not provided' }}</b></div>
-      <div><small>Age bracket</small><b>{{ customer.age_bracket or 'Not provided' }}</b></div>
-      <div><small>Gender</small><b>{{ customer.gender or 'Not provided' }}</b></div>
+  <aside class="account-side">
+    <div class="panel profile-card">
+      {% if picture_url %}<img class="avatar" src="{{ picture_url }}" alt="" referrerpolicy="no-referrer">{% else %}<span class="avatar">{{ (customer.first_name or 'C')[:1]|upper }}</span>{% endif %}
+      <h2>{{ customer.first_name or 'Customer' }} {{ customer.last_name or '' }}</h2>
+      <p class="muted">{{ customer.email or 'No email on file' }}</p>
+      <div class="progress" aria-hidden="true"><span style="width: {{ (filled * 100 / 5)|round|int }}%"></span></div>
+      <small class="muted">Profile {{ (filled * 100 / 5)|round|int }}% complete</small>
+      <nav class="side-nav" aria-label="Account sections">
+        <a href="#profile">Personal details</a>
+        <a href="#orders">Recent orders</a>
+        <a href="#recommendations">Recommendations</a>
+        <a href="#demo">Demo tools</a>
+      </nav>
     </div>
-  </section>
-  <section class="account-panel">
-    <div class="eyebrow">Home address</div>
-    <p>{{ customer.home_address_line1 or 'Not provided' }}{% if customer.home_address_line2 %}, {{ customer.home_address_line2 }}{% endif %}</p>
-    <p>{{ customer.signup_city }}, {{ customer.signup_state }}, {{ customer.signup_region }} {{ customer.home_postal_code or '' }}</p>
-    <p>{{ customer.home_country or 'Not provided' }}</p>
-  </section>
-  <section class="account-panel account-orders">
-    <div class="eyebrow">Orders</div>
-    {% if orders %}
-      {% for order in orders %}<div class="order-row"><span><b>{{ order.order_id }}</b><small>{{ order.order_timestamp }}</small><small>{{ order.ship_address_line1 or 'Address unavailable' }}, {{ order.ship_city }}, {{ order.ship_state }} {{ order.ship_postal_code or '' }}</small></span><span>{{ order.order_status }}</span><strong>₹{{ '{:,.2f}'.format(order.total_amount) }}</strong></div>{% endfor %}
-    {% else %}<p class="muted">No orders yet.</p>{% endif %}
-  </section>
-  <section class="account-panel">
-    <div class="eyebrow">Recommendations</div>
-    <h2>Reset my recommendations</h2>
-    <p class="muted">Deletes your browsing history, cart, wishlist and orders so recommendations start fresh.
-      Your account and sign-in details are kept.</p>
-    <form method="post" action="/account/reset-recommendations"
-          onsubmit="return confirm('This deletes your activity, orders and recommendations. Your account stays. Continue?');">
-      <button class="btn" type="submit">Reset my recommendations</button>
-    </form>
-  </section>
+  </aside>
+
+  <div class="account-main">
+    <section class="panel" id="profile">
+      <div class="panel-head">
+        <div><div class="eyebrow">Profile settings</div><h2>Personal details</h2></div>
+        <small class="muted">Member since {{ customer.signup_date or '—' }}</small>
+      </div>
+      <form method="post" action="/account/profile" novalidate>
+        <div class="form-grid">
+          <div class="form-section-title">About you</div>
+          <label class="field">First name
+            <input name="first_name" value="{{ val('first_name') }}" required maxlength="60" autocomplete="given-name">
+          </label>
+          <label class="field">Last name
+            <input name="last_name" value="{{ val('last_name') }}" maxlength="60" autocomplete="family-name">
+          </label>
+          <label class="field">Email <span class="hint">From your Google account</span>
+            <input value="{{ customer.email or '' }}" readonly>
+          </label>
+          <label class="field">Mobile number <span class="hint">10 digits, or with country code</span>
+            <input name="phone" type="tel" value="{{ val('phone') }}" placeholder="98765 43210" autocomplete="tel">
+          </label>
+          <label class="field">Gender
+            <select name="gender">
+              {% for value, label in genders.items() %}<option value="{{ value }}" {% if selected_gender == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+          </label>
+          <label class="field">Age range
+            <select name="age_bracket">
+              <option value="">Prefer not to say</option>
+              {% for value in age_brackets %}<option value="{{ value }}" {% if selected_age == value %}selected{% endif %}>{{ value }}</option>{% endfor %}
+            </select>
+          </label>
+
+          <div class="form-section-title">Home address</div>
+          <label class="field field-wide">Address line 1
+            <input name="home_address_line1" value="{{ val('home_address_line1') }}" maxlength="200" autocomplete="address-line1" placeholder="House / flat, street">
+          </label>
+          <label class="field field-wide">Address line 2 <span class="hint">Optional</span>
+            <input name="home_address_line2" value="{{ val('home_address_line2') }}" maxlength="200" autocomplete="address-line2" placeholder="Area, landmark">
+          </label>
+          <label class="field">City <span class="hint">State and region are filled in for you</span>
+            <select name="city">
+              <option value="">Choose your city</option>
+              {% for city in cities %}<option value="{{ city }}" {% if selected_city == city %}selected{% endif %}>{{ city }}</option>{% endfor %}
+            </select>
+          </label>
+          <label class="field">Postal code
+            <input name="home_postal_code" value="{{ val('home_postal_code') }}" maxlength="20" inputmode="numeric" autocomplete="postal-code">
+          </label>
+          <label class="field">Country
+            <input name="home_country" value="{{ val('home_country') or 'India' }}" maxlength="60" autocomplete="country-name">
+          </label>
+          <label class="field">State / region
+            <input value="{{ customer.signup_state or '—' }}{% if customer.signup_region %} · {{ customer.signup_region }}{% endif %}" readonly>
+          </label>
+
+          <div class="form-section-title">Preferences</div>
+          <label class="field field-wide">How did you hear about Pantree?
+            <select name="heard_from">
+              <option value="">Choose one</option>
+              {% for value, label in heard_from_choices.items() %}<option value="{{ value }}" {% if selected_heard == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+          </label>
+          <label class="check-row"><input type="checkbox" name="email_opt_in" {% if email_opt %}checked{% endif %}> Email me offers and new arrivals</label>
+          <label class="check-row"><input type="checkbox" name="sms_opt_in" {% if sms_opt %}checked{% endif %}> Text me order updates and offers</label>
+        </div>
+        <div class="form-actions">
+          <a class="btn btn-ghost" href="/account">Cancel</a>
+          <button class="btn" type="submit">Save profile</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel" id="orders">
+      <div class="panel-head">
+        <div><div class="eyebrow">Orders</div><h2>Recent orders</h2></div>
+        <a class="text-link" href="/orders">View all →</a>
+      </div>
+      {% if orders %}
+        {% for order in orders %}
+        <div class="order-row">
+          <span><b>{{ order.order_id }}</b><small>{{ (order.order_timestamp or '')|replace('T', ' at ') }}</small>{% if order.ship_city %}<small>{{ order.ship_address_line1 or '' }}{% if order.ship_address_line1 %}, {% endif %}{{ order.ship_city }}, {{ order.ship_state }} {{ order.ship_postal_code or '' }}</small>{% endif %}</span>
+          <span class="status status-{{ (order.order_status or '')|lower|replace(' ', '-') }}">{{ order.order_status }}</span>
+          <strong>₹{{ '{:,.0f}'.format(order.total_amount or 0) }}</strong>
+        </div>
+        {% endfor %}
+      {% else %}<p class="muted">No orders yet. <a class="text-link" href="/browse">Start shopping →</a></p>{% endif %}
+    </section>
+
+    <section class="panel" id="recommendations">
+      <div class="panel-head"><div><div class="eyebrow">Recommendations</div><h2>Start fresh</h2></div></div>
+      <div class="tool-row">
+        <p class="muted">Deletes your browsing history, cart, wishlist and orders so recommendations start over. Your account and profile are kept.</p>
+        <form method="post" action="/account/reset-recommendations"
+              onsubmit="return confirm('This deletes your activity, orders and recommendations. Your account stays. Continue?');">
+          <button class="btn btn-danger" type="submit">Reset recommendations</button>
+        </form>
+      </div>
+    </section>
+
+    <section class="panel" id="demo">
+      <div class="panel-head"><div><div class="eyebrow">Demo tools</div><h2>Store simulator</h2></div></div>
+      <div class="tool-row">
+        <p class="muted">Restock every product to its starting inventory, so sold-out items can be bought again.</p>
+        <button class="btn btn-ghost" type="button" onclick="refreshInv()">Restock inventory</button>
+      </div>
+    </section>
+  </div>
 </div>
 {% endblock %}
