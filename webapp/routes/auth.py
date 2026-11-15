@@ -42,6 +42,16 @@ def _redirect_with(path: str, msg: str) -> RedirectResponse:
     return RedirectResponse(f"{path}?msg={quote_plus(msg)}", status_code=303)
 
 
+@router.get("/terms", response_class=HTMLResponse)
+def terms_page(request: Request):
+    return tpl.TemplateResponse(request, "legal.html", {"title": "Terms of use", "page": "terms"})
+
+
+@router.get("/privacy", response_class=HTMLResponse)
+def privacy_page(request: Request):
+    return tpl.TemplateResponse(request, "legal.html", {"title": "Privacy policy", "page": "privacy"})
+
+
 @router.get("/login", response_class=HTMLResponse)
 def login_page(request: Request, error: str = "", msg: str = "", sid: str = Cookie(None)):
     con = db()
@@ -65,22 +75,33 @@ def login_page(request: Request, error: str = "", msg: str = "", sid: str = Cook
     )
 
 
-def _showcase_products(con, per_department=2):
-    """A few well-reviewed products with photos for the sign-in page (cached on Postgres)."""
+# Sign-in collage: one well-reviewed, in-stock product per (department, gender), in this order,
+# so the page shows womenswear and menswear across apparel, footwear and accessories.
+SHOWCASE_SLOTS = [
+    ("Apparel", "Women"), ("Footwear", "Men"), ("Accessories", "Women"),
+    ("Apparel", "Men"), ("Footwear", "Women"), ("Accessories", "Men"),
+]
+
+
+def _showcase_products(con):
+    """Products with photos for the sign-in page (cached on Postgres)."""
     def compute():
-        rows = con.execute(
-            """SELECT p.product_name, p.brand_name, p.image_url, p.h1_category
-               FROM products p JOIN inventory i USING(product_id)
-               WHERE p.image_url IS NOT NULL AND p.image_url <> '' AND i.current_stock > 0
-               ORDER BY p.review_count DESC, p.avg_rating DESC, p.product_id LIMIT 60"""
-        ).fetchall()
-        picked, per = [], {}
-        for row in rows:
-            department = row["h1_category"]
-            if per.get(department, 0) < per_department:
-                per[department] = per.get(department, 0) + 1
-                picked.append(dict(row))
-        return picked[:6]
+        picked = []
+        for department, gender in SHOWCASE_SLOTS:
+            row = con.execute(
+                """SELECT p.product_name, p.image_url
+                   FROM products p JOIN inventory i USING(product_id)
+                   WHERE p.h1_category=? AND p.gender=? AND i.current_stock > 0
+                     AND p.image_url IS NOT NULL AND p.image_url <> ''
+                   ORDER BY p.review_count DESC, p.avg_rating DESC, p.product_id LIMIT 1""",
+                (department, gender),
+            ).fetchone()
+            if row:
+                url = row["image_url"]
+                if url.startswith("http://"):  # the page is served over HTTPS
+                    url = "https://" + url[len("http://"):]
+                picked.append({"product_name": row["product_name"], "image_url": url})
+        return picked
 
     try:
         return _catalog_cached(con, "login_showcase", compute)
