@@ -13,8 +13,6 @@
 
 ### [Live demo](https://pantree-storefront-407523385900.asia-southeast1.run.app/login)
 
-**https://pantree-storefront-407523385900.asia-southeast1.run.app/login**
-
 Hosted on Google Cloud Run (scales to zero, so the first request after a quiet spell takes a few
 seconds). Sign in with your Google account; a new account is created on first sign-in. Deploy your
 own copy with `scripts/deploy_cloudrun.sh` ([docs/setup.md](docs/setup.md#hosting-google-cloud-run--neon-postgres)).
