@@ -1,6 +1,18 @@
+# Everything Pantree needs: storefront, recommender, tests and the analysis notebook.
+#   pip install -r requirements.txt
+# PyTorch (pulled in by sentence-transformers) is large; for the CPU-only build add
+#   --extra-index-url https://download.pytorch.org/whl/cpu
+# The Dockerfile and CI do this.
+
+# Data and storage
 pandas==3.1.0
 numpy==2.4.6
 pyarrow==26.0.0
+duckdb==2.0.0
+psycopg[binary,pool]==3.3.9  # live database on Postgres (DATABASE_URL)
+ecommerce-simulator @ https://github.com/Meetpanchal58/ecommerce-simulator/archive/1ea2a75b89b241f0a4ea933d79899350fa47000e.zip  # the shop's data (prepare_data.py)
+
+# Storefront
 fastapi==0.162.0
 uvicorn==0.54.0
 jinja2==3.1.6
@@ -10,10 +22,19 @@ authlib==1.6.5  # Google sign-in (OAuth 2.0 / OpenID Connect)
 itsdangerous==2.2.0  # signs the OAuth state cookie
 httpx==0.28.1
 phonenumbers==9.0.43
-duckdb==2.0.0
-ecommerce-simulator @ https://github.com/Meetpanchal58/ecommerce-simulator/archive/1ea2a75b89b241f0a4ea933d79899350fa47000e.zip  # the shop's data (prepare_data.py)
-psycopg[binary,pool]==3.3.9  # live database on Postgres (DATABASE_URL)
+
+# Recommender (ALS, content similarity and the ranker; PANTREE_HEAVY_RECOMMENDATIONS=0 skips the first two)
 implicit==0.7.3
 sentence-transformers==6.2.0
 faiss-cpu==1.15.1
 lightgbm==4.7.0
+
+# Tests
+pytest==8.3.5
+
+# Analysis notebook (jupyter execute --inplace analysis/insights.ipynb)
+matplotlib==3.11.2
+nbformat==5.11.1
+nbclient==0.11.0
+ipykernel==7.4.0
+scikit-learn==1.9.1

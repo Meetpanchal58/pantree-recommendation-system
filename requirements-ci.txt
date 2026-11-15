@@ -1,2 +1,0 @@
-# Test runner for CI (kept out of requirements.txt / requirements-deploy.txt).
-pytest==8.3.5
