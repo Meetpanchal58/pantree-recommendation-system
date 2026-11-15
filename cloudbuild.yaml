@@ -1,0 +1,32 @@
+# Continuous deployment: a Cloud Build trigger runs this on every push to main
+# (set up in the console, see docs/setup.md "Automatic deploys").
+# Builds the image, pushes it to Artifact Registry and rolls it out to the existing
+# Cloud Run service. Environment variables, secrets, scaling and the service account
+# stay as scripts/deploy_cloudrun.sh configured them; only the image changes.
+substitutions:
+  _REGION: asia-southeast1
+  _SERVICE: pantree-storefront
+  _REPO: pantree
+  _IMAGE: ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/storefront:${SHORT_SHA}
+
+steps:
+  - id: build
+    name: gcr.io/cloud-builders/docker
+    args: ["build", "-t", "${_IMAGE}", "."]
+
+  - id: push
+    name: gcr.io/cloud-builders/docker
+    args: ["push", "${_IMAGE}"]
+
+  - id: deploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args: ["run", "deploy", "${_SERVICE}", "--image", "${_IMAGE}", "--region", "${_REGION}", "--quiet"]
+
+images: ["${_IMAGE}"]
+
+# Installing PyTorch and downloading the shop's data takes longer than the 10-minute default.
+timeout: 2400s
+options:
+  dynamicSubstitutions: true
+  logging: CLOUD_LOGGING_ONLY
