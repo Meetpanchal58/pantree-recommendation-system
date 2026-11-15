@@ -11,7 +11,9 @@
 - **Bottleneck:** only 34.2% of orders have a bought product anywhere in the 50-product candidate list, so retrieval caps the score (the ranker cannot recover a product that was never retrieved). Next step: better candidate generation, e.g. a two-tower retriever trained on views, impressions and orders.
 <!-- TLDR:END -->
 
-### Live demo
+### [Live demo](https://pantree-storefront-407523385900.asia-southeast1.run.app/login)
+
+**https://pantree-storefront-407523385900.asia-southeast1.run.app/login**
 
 Hosted on Google Cloud Run (scales to zero, so the first request after a quiet spell takes a few
 seconds). Sign in with your Google account; a new account is created on first sign-in. Deploy your
